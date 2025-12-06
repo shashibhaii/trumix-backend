@@ -1,0 +1,237 @@
+# TruMix Admin Panel API Requirements
+
+This document outlines the backend API endpoints required to power the TruMix Admin Panel.
+
+## Authentication & Security
+**Base URL:** `/api/v1/admin`
+**Auth Header:** `Authorization: Bearer <token>` (Required for all non-auth endpoints)
+
+### 1. Admin Login
+*   **Endpoint:** `POST /auth/login`
+*   **Description:** Authenticate admin user and return JWT.
+*   **Request Body:**
+    ```json
+    {
+      "email": "admin@trumix.com",
+      "password": "password123"
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "token": "eyJhbGciOiJIUzI1NiIs...",
+      "user": {
+        "id": "adm_123",
+        "name": "Admin User",
+        "email": "admin@trumix.com",
+        "role": "admin"
+      }
+    }
+    ```
+
+### 2. Admin Register (Optional/Initial Setup)
+*   **Endpoint:** `POST /auth/register`
+*   **Request Body:**
+    ```json
+    {
+      "name": "New Admin",
+      "email": "newadmin@trumix.com",
+      "password": "securepassword",
+      "secretKey": "admin_secret_key" // To prevent public registration
+    }
+    ```
+
+---
+
+## Dashboard Overview
+### 3. Get Dashboard Stats
+*   **Endpoint:** `GET /dashboard/stats`
+*   **Description:** Returns aggregate metrics for the dashboard cards.
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "totalSales": { "value": 125000, "change": 12.5, "trend": "up" },
+        "totalOrders": { "value": 450, "change": 8.2, "trend": "up" },
+        "totalProducts": { "value": 24, "change": 0, "trend": "neutral" },
+        "totalCustomers": { "value": 1200, "change": 15.3, "trend": "up" }
+      }
+    }
+    ```
+
+---
+
+## Product Management
+### 4. List Products
+*   **Endpoint:** `GET /products`
+*   **Query Params:** `page`, `limit`, `search`, `category`
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "data": [
+        {
+          "id": "prod_1",
+          "name": "Masala Chai Premix",
+          "category": "Premix",
+          "price": 499,
+          "stock": 145,
+          "image": "https://url/to/image.png",
+          "description": "Authentic masala chai..."
+        }
+      ],
+      "pagination": { "total": 24, "page": 1, "pages": 3 }
+    }
+    ```
+
+### 5. Create Product
+*   **Endpoint:** `POST /products`
+*   **Content-Type:** `multipart/form-data` (for image upload) or JSON if image is URL.
+*   **Request Body:**
+    *   `name`: string
+    *   `category`: string
+    *   `price`: number
+    *   `stock`: number
+    *   `description`: string
+    *   `image`: File (binary)
+*   **Response (201 Created):**
+    ```json
+    {
+      "success": true,
+      "data": { "id": "prod_new_1", ... }
+    }
+    ```
+
+### 6. Update Product
+*   **Endpoint:** `PUT /products/:id`
+*   **Request Body:** Same as Create Product (fields optional).
+
+### 7. Delete Product
+*   **Endpoint:** `DELETE /products/:id`
+
+---
+
+## Order Management
+### 8. List Orders
+*   **Endpoint:** `GET /orders`
+*   **Query Params:** `page`, `limit`, `status` (Pending, Shipped, Delivered), `search`
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "data": [
+        {
+          "id": "ORD-1234",
+          "customer": "Shashwat Kumar",
+          "email": "shashwat@example.com",
+          "itemsCount": 2,
+          "total": 1497,
+          "status": "Delivered",
+          "date": "2025-12-01T10:00:00Z"
+        }
+      ]
+    }
+    ```
+
+### 9. Get Order Details
+*   **Endpoint:** `GET /orders/:id`
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "id": "ORD-1234",
+        "customer": {
+          "name": "Shashwat Kumar",
+          "email": "shashwat@example.com",
+          "phone": "+91 98765 43210",
+          "address": "123, Green Park..."
+        },
+        "items": [
+          { "id": "prod_1", "name": "Masala Chai", "quantity": 2, "price": 499, "image": "..." }
+        ],
+        "payment": { "method": "UPI", "status": "Paid" },
+        "summary": { "subtotal": 1447, "tax": 0, "shipping": 50, "discount": 0, "total": 1497 },
+        "status": "Delivered",
+        "timeline": [ ... ]
+      }
+    }
+    ```
+
+### 10. Update Order Status
+*   **Endpoint:** `PATCH /orders/:id/status`
+*   **Request Body:**
+    ```json
+    { "status": "Shipped" } // Enum: Pending, Processing, Shipped, Delivered, Cancelled
+    ```
+
+---
+
+## Category Management
+### 11. List Categories
+*   **Endpoint:** `GET /categories`
+*   **Response:** List of categories with product counts.
+
+### 12. Manage Categories
+*   **Create:** `POST /categories` (`{ name, description }`)
+*   **Update:** `PUT /categories/:id`
+*   **Delete:** `DELETE /categories/:id`
+
+---
+
+## Offers & Coupons
+### 13. List Offers
+*   **Endpoint:** `GET /offers`
+*   **Response:** List of all coupons.
+
+### 14. Create Offer
+*   **Endpoint:** `POST /offers`
+*   **Request Body:**
+    ```json
+    {
+      "code": "WELCOME50",
+      "type": "Percentage", // or "Fixed", "Shipping"
+      "value": 50, // Amount or Percentage
+      "minOrderValue": 500,
+      "validFrom": "2025-01-01",
+      "validUntil": "2025-12-31",
+      "usageLimit": 1000,
+      "status": "Active"
+    }
+    ```
+
+### 15. Validate Coupon (Client-side usage)
+*   **Endpoint:** `POST /offers/validate`
+*   **Request Body:** `{ "code": "WELCOME50", "cartValue": 1200 }`
+*   **Response:**
+    ```json
+    {
+      "valid": true,
+      "discountAmount": 600,
+      "message": "Coupon applied successfully"
+    }
+    ```
+
+---
+
+## Reports & Analytics
+### 16. Get Sales Report
+*   **Endpoint:** `GET /reports/sales`
+*   **Query Params:** `period` (daily, weekly, monthly, yearly), `startDate`, `endDate`
+*   **Response:**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "labels": ["Mon", "Tue", "Wed", ...],
+        "revenue": [12000, 15000, 8000, ...],
+        "orders": [12, 15, 8, ...]
+      }
+    }
+    ```
+
+### 17. Get Top Products
+*   **Endpoint:** `GET /reports/top-products`
+*   **Response:** List of top 5-10 selling products with revenue/quantity stats.
