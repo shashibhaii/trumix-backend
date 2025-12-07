@@ -26,6 +26,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 origins = [
     "http://localhost",
     "http://localhost:3000", # React default
+    "https://www.trumix.co.in",
+    "https://trumix.co.in",
+    "https://www.trumix.co.in/",
+    "https://trumix.co.in/"
 ]
 
 app.add_middleware(
