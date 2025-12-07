@@ -5,7 +5,7 @@ from .. import models, schemas, database
 from .auth import get_current_user
 
 router = APIRouter(
-    prefix="/categories",
+    prefix="/api/v1/categories",
     tags=["Categories"]
 )
 

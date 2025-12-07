@@ -3,31 +3,79 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from .. import models, schemas, database
 from .auth import get_current_user
+from ..services.azure_blob import upload_image_to_blob
 
 router = APIRouter(
-    prefix="/products",
+    prefix="/api/v1/products",
     tags=["Products"]
 )
 
-@router.get("/", response_model=List[schemas.ProductResponse]) # Simplified pagination for now
+@router.get("/", response_model=schemas.ProductListAPIResponse)
 def get_products(
-    skip: int = 0, 
-    limit: int = 100, 
+    page: int = 1, 
+    limit: int = 10, 
     search: Optional[str] = None, 
     category: Optional[str] = None,
+    sort: Optional[str] = None,
     db: Session = Depends(database.get_db)
 ):
     query = db.query(models.Product)
+    
     if search:
         query = query.filter(models.Product.name.contains(search))
     if category:
-        query = query.join(models.Category).filter(models.Category.name == category)
-    
+        # Check if category is ID or slug
+        if category.isdigit():
+            query = query.filter(models.Product.category_id == int(category))
+        else:
+            query = query.join(models.Category).filter(models.Category.slug == category)
+            
+    # Sorting
+    if sort == 'price_asc':
+        query = query.order_by(models.Product.price.asc())
+    elif sort == 'price_desc':
+        query = query.order_by(models.Product.price.desc())
+    elif sort == 'newest':
+        query = query.order_by(models.Product.id.desc())
+    # elif sort == 'popular': # Need order stats for this
+    #     pass
+        
+    total = query.count()
+    skip = (page - 1) * limit
     products = query.offset(skip).limit(limit).all()
-    return products
+    
+    pages = (total + limit - 1) // limit
+    
+    return {
+        "success": True,
+        "data": {
+            "products": products,
+            "pagination": {
+                "total": total,
+                "page": page,
+                "pages": pages
+            }
+        }
+    }
+
+@router.get("/{id_or_slug}", response_model=schemas.ProductDetailAPIResponse)
+def get_product_details(id_or_slug: str, db: Session = Depends(database.get_db)):
+    query = db.query(models.Product)
+    if id_or_slug.isdigit():
+        product = query.filter(models.Product.id == int(id_or_slug)).first()
+    else:
+        product = query.filter(models.Product.slug == id_or_slug).first()
+        
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    return {
+        "success": True,
+        "data": product
+    }
 
 @router.post("/", response_model=schemas.ProductResponse, status_code=status.HTTP_201_CREATED)
-def create_product(
+async def create_product(
     name: str = Form(...),
     category_id: int = Form(...),
     price: float = Form(...),
@@ -37,28 +85,11 @@ def create_product(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # Handle image upload here (save to disk)
+    # Handle image upload
     image_url = None
     if image:
-        import shutil
-        import os
-        import uuid
-        
-        # Generate unique filename
-        file_extension = os.path.splitext(image.filename)[1]
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = f"static/images/{unique_filename}"
-        
-        # Ensure directory exists
-        os.makedirs("static/images", exist_ok=True)
-        
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-            
-        # Construct URL (assuming localhost for now, in prod use env var for base URL)
-        # For now, we store the relative path or absolute URL. 
-        # Let's store the relative path accessible via the static mount.
-        image_url = f"/static/images/{unique_filename}"
+        # Use Azure Blob Storage
+        image_url = await upload_image_to_blob(image)
     
     new_product = models.Product(
         name=name,
@@ -74,7 +105,7 @@ def create_product(
     return new_product
 
 @router.put("/{id}", response_model=schemas.ProductResponse)
-def update_product(
+async def update_product(
     id: int,
     name: Optional[str] = Form(None),
     category_id: Optional[int] = Form(None),
@@ -95,21 +126,8 @@ def update_product(
     if stock: product.stock = stock
     if description: product.description = description
     if image:
-        import shutil
-        import os
-        import uuid
-        
-        # Generate unique filename
-        file_extension = os.path.splitext(image.filename)[1]
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = f"static/images/{unique_filename}"
-        
-        os.makedirs("static/images", exist_ok=True)
-        
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-            
-        product.image_url = f"/static/images/{unique_filename}"
+        # Use Azure Blob Storage
+        product.image_url = await upload_image_to_blob(image)
     
     db.commit()
     db.refresh(product)

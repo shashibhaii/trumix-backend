@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from .database import engine, Base
-from .routers import auth, dashboard, products, orders, categories, offers, reports
+from .routers import auth, dashboard, products, orders, categories, offers, reports, users, cart, wholesale
 from fastapi.middleware.cors import CORSMiddleware
-
 from fastapi.staticfiles import StaticFiles
 import os
 
@@ -39,12 +38,15 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(dashboard.router)
 app.include_router(products.router)
 app.include_router(orders.router)
 app.include_router(categories.router)
 app.include_router(offers.router)
 app.include_router(reports.router)
+app.include_router(cart.router)
+app.include_router(wholesale.router)
 
 @app.get("/")
 def read_root():

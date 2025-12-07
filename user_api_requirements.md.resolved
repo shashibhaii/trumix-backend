@@ -1,0 +1,368 @@
+# User API Requirements
+
+This document outlines the API endpoints required for the user-facing application.
+
+## 1. Authentication & User Management
+
+### 1.1 Register
+**Endpoint:** `POST /api/v1/auth/register`
+**Description:** Register a new user account.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "fullName": "John Doe",
+  "phone": "+1234567890" // Optional
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Registration successful",
+  "data": {
+    "user": {
+      "id": "u_123",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "role": "user"
+    },
+    "token": "eyJhbG..." // Access Token
+  }
+}
+```
+
+### 1.2 Login
+**Endpoint:** `POST /api/v1/auth/login`
+**Description:** Authenticate a user and return a token.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": "u_123",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "role": "user"
+    },
+    "token": "eyJhbG..."
+  }
+}
+```
+
+### 1.3 Get User Profile
+**Endpoint:** `GET /api/v1/users/profile`
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "u_123",
+    "email": "user@example.com",
+    "fullName": "John Doe",
+    "phone": "+1234567890",
+    "avatarUrl": "https://...",
+    "addresses": [
+      {
+        "id": "addr_1",
+        "street": "123 Tea Lane",
+        "city": "Mumbai",
+        "state": "MH",
+        "zip": "400001",
+        "country": "India",
+        "isDefault": true
+      }
+    ]
+  }
+}
+```
+
+### 1.4 Update Profile
+**Endpoint:** `PUT /api/v1/users/profile`
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "fullName": "John Updated",
+  "phone": "+9876543210"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Profile updated",
+  "data": { ...updatedUserObject }
+}
+```
+
+---
+
+## 2. Products
+
+### 2.1 List Products
+**Endpoint:** `GET /api/v1/products`
+**Query Parameters:**
+- `page`: Page number (default 1)
+- `limit`: Items per page (default 10)
+- `category`: Filter by category ID or slug
+- `sort`: `price_asc`, `price_desc`, `newest`, `popular`
+- `search`: Search query string
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "products": [
+      {
+        "id": "prod_1",
+        "name": "Premium Darjeeling Tea",
+        "slug": "premium-darjeeling-tea",
+        "description": "First flush...",
+        "price": 500,
+        "salePrice": 450, // Optional
+        "images": ["url1.jpg", "url2.jpg"],
+        "category": { "id": "cat_1", "name": "Black Tea" },
+        "inStock": true,
+        "rating": 4.5,
+        "reviewCount": 120
+      }
+    ],
+    "pagination": {
+      "total": 50,
+      "page": 1,
+      "pages": 5
+    }
+  }
+}
+```
+
+### 2.2 Get Product Details
+**Endpoint:** `GET /api/v1/products/{id_or_slug}`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "prod_1",
+    "name": "Premium Darjeeling Tea",
+    "slug": "premium-darjeeling-tea",
+    "description": "Full description...",
+    "price": 500,
+    "salePrice": 450,
+    "variants": [
+      { "id": "var_1", "name": "100g", "price": 500, "stock": 50 },
+      { "id": "var_2", "name": "250g", "price": 1200, "stock": 30 }
+    ],
+    "images": ["url1.jpg", "url2.jpg"],
+    "category": { "id": "cat_1", "name": "Black Tea" },
+    "attributes": { "origin": "Darjeeling", "caffeine": "High" }
+  }
+}
+```
+
+### 2.3 Get Categories
+**Endpoint:** `GET /api/v1/categories`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "cat_1", "name": "Black Tea", "slug": "black-tea", "image": "url..." },
+    { "id": "cat_2", "name": "Green Tea", "slug": "green-tea", "image": "url..." }
+  ]
+}
+```
+
+---
+
+## 3. Cart (Server-side Sync)
+
+### 3.1 Get Cart
+**Endpoint:** `GET /api/v1/cart`
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "item_1",
+        "product": { "id": "prod_1", "name": "Tea", "image": "url..." },
+        "variant": { "id": "var_1", "name": "100g" },
+        "quantity": 2,
+        "price": 450,
+        "total": 900
+      }
+    ],
+    "subtotal": 900,
+    "tax": 45,
+    "total": 945
+  }
+}
+```
+
+### 3.2 Add/Update Cart Item
+**Endpoint:** `POST /api/v1/cart/items`
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "productId": "prod_1",
+  "variantId": "var_1", // Optional
+  "quantity": 2
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Cart updated",
+  "data": { ...updatedCartObject }
+}
+```
+
+### 3.3 Remove Cart Item
+**Endpoint:** `DELETE /api/v1/cart/items/{itemId}`
+
+---
+
+## 4. Orders & Checkout
+
+### 4.1 Create Order
+**Endpoint:** `POST /api/v1/orders`
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "items": [ // Optional if using server-side cart, but good for direct checkout or guest
+    { "productId": "prod_1", "variantId": "var_1", "quantity": 2 }
+  ],
+  "shippingAddress": {
+    "street": "123 Tea Lane",
+    "city": "Mumbai",
+    "state": "MH",
+    "zip": "400001",
+    "country": "India"
+  },
+  "paymentMethod": "card", // or 'cod', 'upi'
+  "couponCode": "WELCOME10" // Optional
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Order created",
+  "data": {
+    "orderId": "ord_987",
+    "totalAmount": 945,
+    "status": "pending",
+    "paymentIntentClientSecret": "pi_..." // If using Stripe/Payment Gateway
+  }
+}
+```
+
+### 4.2 Get User Orders
+**Endpoint:** `GET /api/v1/orders`
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "ord_987",
+      "date": "2023-10-27T10:00:00Z",
+      "total": 945,
+      "status": "processing", // pending, processing, shipped, delivered, cancelled
+      "itemsCount": 2
+    }
+  ]
+}
+```
+
+### 4.3 Get Order Details
+**Endpoint:** `GET /api/v1/orders/{id}`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "ord_987",
+    "items": [...],
+    "shippingAddress": {...},
+    "paymentStatus": "paid",
+    "trackingNumber": "TRK123456"
+  }
+}
+```
+
+---
+
+## 5. Wholesale & Contact
+
+### 5.1 Submit Wholesale Inquiry
+**Endpoint:** `POST /api/v1/wholesale/inquiry`
+
+**Request Body:**
+```json
+{
+  "companyName": "Tea Cafe LLC",
+  "contactPerson": "Jane Smith",
+  "email": "jane@teacafe.com",
+  "phone": "+1987654321",
+  "message": "Interested in bulk purchasing Darjeeling tea.",
+  "estimatedVolume": "10-50kg"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Inquiry submitted successfully. We will contact you soon."
+}
+```
+
+### 5.2 Contact Form
+**Endpoint:** `POST /api/v1/contact`
+
+**Request Body:**
+```json
+{
+  "name": "Visitor",
+  "email": "visitor@example.com",
+  "subject": "Product Question",
+  "message": "Do you ship internationally?"
+}
+```

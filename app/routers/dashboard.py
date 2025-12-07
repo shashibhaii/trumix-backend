@@ -4,7 +4,7 @@ from .. import models, schemas, database
 from .auth import get_current_user
 
 router = APIRouter(
-    prefix="/dashboard",
+    prefix="/api/v1/dashboard",
     tags=["Dashboard"]
 )
 
