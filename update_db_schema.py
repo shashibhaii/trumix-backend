@@ -7,6 +7,8 @@ def update_schema():
         try:
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS otp VARCHAR"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS otp_expiry TIMESTAMP"))
             print("Updated users table.")
         except Exception as e:
             print(f"Error updating users table: {e}")
@@ -40,6 +42,24 @@ def update_schema():
             print("Updated orders table.")
         except Exception as e:
             print(f"Error updating orders table: {e}")
+
+        # Update Wholesale Inquiries table
+        try:
+            conn.execute(text("ALTER TABLE wholesale_inquiries ADD COLUMN IF NOT EXISTS business_type VARCHAR"))
+            conn.execute(text("ALTER TABLE wholesale_inquiries ADD COLUMN IF NOT EXISTS gst_id VARCHAR"))
+            conn.execute(text("ALTER TABLE wholesale_inquiries ADD COLUMN IF NOT EXISTS address TEXT"))
+            conn.execute(text("ALTER TABLE wholesale_inquiries ADD COLUMN IF NOT EXISTS website VARCHAR"))
+            
+            # Try to create enum type if not exists
+            try:
+                conn.execute(text("CREATE TYPE wholesaleinquirystatus AS ENUM ('Pending', 'Approved', 'Rejected')"))
+            except Exception:
+                pass 
+            
+            conn.execute(text("ALTER TABLE wholesale_inquiries ADD COLUMN IF NOT EXISTS status wholesaleinquirystatus DEFAULT 'Pending'"))
+            print("Updated wholesale_inquiries table.")
+        except Exception as e:
+            print(f"Error updating wholesale_inquiries table: {e}")
 
         # Commit changes
         conn.commit()

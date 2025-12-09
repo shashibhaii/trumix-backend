@@ -6,6 +6,8 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 import os
+import random
+import string
 from .. import models, schemas, database
 
 router = APIRouter(
@@ -58,7 +60,77 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     return user
 
 # Endpoints
-# ... (register remains same)
+
+@router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
+    # Check if user exists
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create new user
+    hashed_password = get_password_hash(user.password)
+    new_user = models.User(
+        name=user.name,
+        email=user.email,
+        hashed_password=hashed_password,
+        phone=user.phone,
+        role=models.UserRole.user
+    )
+        
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@router.post("/send-otp")
+def send_otp(request: schemas.OTPRequest, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.phone == request.phone).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User with this phone number not found")
+        
+    # Generate OTP
+    otp = str(random.randint(100000, 999999))
+    
+    # Save OTP to DB
+    user.otp = otp
+    user.otp_expiry = datetime.utcnow() + timedelta(minutes=10)
+    db.commit()
+    
+    # Send OTP (Mock)
+    print(f"--- OTP for {request.phone}: {otp} ---")
+    
+    return {"message": "OTP sent successfully"}
+
+@router.post("/login-otp", response_model=schemas.Token)
+def login_otp(request: schemas.OTPLogin, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.phone == request.phone).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if not user.otp or user.otp != request.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+        
+    if user.otp_expiry < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="OTP expired")
+        
+    # Clear OTP
+    user.otp = None
+    user.otp_expiry = None
+    db.commit()
+    
+    # Generate Token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "role": user.role.value,
+        "user": user
+    }
 
 @router.post("/login", response_model=schemas.Token)
 def login(user_credentials: schemas.UserLogin, db: Session = Depends(database.get_db)):
@@ -77,6 +149,7 @@ def login(user_credentials: schemas.UserLogin, db: Session = Depends(database.ge
     return {
         "access_token": access_token, 
         "token_type": "bearer",
+        "role": user.role.value,
         "user": user
     }
 
@@ -97,5 +170,6 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     return {
         "access_token": access_token, 
         "token_type": "bearer",
+        "role": user.role.value,
         "user": user
     }

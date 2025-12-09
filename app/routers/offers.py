@@ -12,11 +12,15 @@ router = APIRouter(
 
 @router.get("/", response_model=List[schemas.OfferResponse])
 def get_offers(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     offers = db.query(models.Offer).all()
     return offers
 
 @router.post("/", response_model=schemas.OfferResponse, status_code=status.HTTP_201_CREATED)
 def create_offer(offer: schemas.OfferCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     db_offer = db.query(models.Offer).filter(models.Offer.code == offer.code).first()
     if db_offer:
         raise HTTPException(status_code=400, detail="Offer code already exists")

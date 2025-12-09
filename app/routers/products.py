@@ -16,6 +16,7 @@ def get_products(
     limit: int = 10, 
     search: Optional[str] = None, 
     category: Optional[str] = None,
+    category_id: Optional[int] = None,
     sort: Optional[str] = None,
     db: Session = Depends(database.get_db)
 ):
@@ -23,7 +24,10 @@ def get_products(
     
     if search:
         query = query.filter(models.Product.name.contains(search))
-    if category:
+    
+    if category_id:
+        query = query.filter(models.Product.category_id == category_id)
+    elif category:
         # Check if category is ID or slug
         if category.isdigit():
             query = query.filter(models.Product.category_id == int(category))
@@ -85,6 +89,8 @@ async def create_product(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     # Handle image upload
     image_url = None
     if image:
@@ -116,6 +122,8 @@ async def update_product(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     product = db.query(models.Product).filter(models.Product.id == id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -135,6 +143,8 @@ async def update_product(
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     product = db.query(models.Product).filter(models.Product.id == id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")

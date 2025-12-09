@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from .models import UserRole, OrderStatus, OfferType, OfferStatus
+from .models import UserRole, OrderStatus, OfferType, OfferStatus, WholesaleInquiryStatus
 import json
 
 # Address Schemas
@@ -30,10 +30,16 @@ class UserCreate(UserBase):
     name: str
     password: str
     phone: Optional[str] = None
-    secret_key: Optional[str] = None # For admin registration
 
 class UserLogin(UserBase):
     password: str
+
+class OTPRequest(BaseModel):
+    phone: str
+
+class OTPLogin(BaseModel):
+    phone: str
+    otp: str
 
 class UserResponse(UserBase):
     id: int
@@ -54,6 +60,7 @@ class UserUpdate(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    role: str
     user: UserResponse
 
 class TokenData(BaseModel):
@@ -258,8 +265,33 @@ class WholesaleInquiryCreate(BaseModel):
     contactPerson: str
     email: EmailStr
     phone: str
+    businessType: Optional[str] = None
+    gstId: Optional[str] = None
+    address: Optional[str] = None
+    website: Optional[str] = None
     message: str
     estimatedVolume: Optional[str] = None
+
+class WholesaleInquiryResponse(BaseModel):
+    id: int
+    company_name: str
+    contact_person: str
+    email: str
+    phone: str
+    business_type: Optional[str] = None
+    gst_id: Optional[str] = None
+    address: Optional[str] = None
+    website: Optional[str] = None
+    message: str
+    estimated_volume: Optional[str] = None
+    status: WholesaleInquiryStatus
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class WholesaleInquiryUpdate(BaseModel):
+    status: WholesaleInquiryStatus
 
 class ContactSubmissionCreate(BaseModel):
     name: str

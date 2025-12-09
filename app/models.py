@@ -26,6 +26,11 @@ class OfferStatus(str, enum.Enum):
     Inactive = "Inactive"
     Expired = "Expired"
 
+class WholesaleInquiryStatus(str, enum.Enum):
+    Pending = "Pending"
+    Approved = "Approved"
+    Rejected = "Rejected"
+
 class User(Base):
     __tablename__ = "users"
 
@@ -36,6 +41,8 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.admin)
     phone = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
+    otp = Column(String, nullable=True)
+    otp_expiry = Column(DateTime, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     addresses = relationship("Address", back_populates="user")
@@ -172,8 +179,13 @@ class WholesaleInquiry(Base):
     contact_person = Column(String, nullable=False)
     email = Column(String, nullable=False)
     phone = Column(String, nullable=False)
+    business_type = Column(String, nullable=True)
+    gst_id = Column(String, nullable=True)
+    address = Column(Text, nullable=True)
+    website = Column(String, nullable=True)
     message = Column(Text, nullable=False)
     estimated_volume = Column(String, nullable=True)
+    status = Column(Enum(WholesaleInquiryStatus), default=WholesaleInquiryStatus.Pending)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class ContactSubmission(Base):

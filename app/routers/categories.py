@@ -16,6 +16,8 @@ def get_categories(db: Session = Depends(database.get_db)):
 
 @router.post("/", response_model=schemas.CategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     db_category = db.query(models.Category).filter(models.Category.name == category.name).first()
     if db_category:
         raise HTTPException(status_code=400, detail="Category already exists")
@@ -28,6 +30,8 @@ def create_category(category: schemas.CategoryCreate, db: Session = Depends(data
 
 @router.put("/{id}", response_model=schemas.CategoryResponse)
 def update_category(id: int, category: schemas.CategoryCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     db_category = db.query(models.Category).filter(models.Category.id == id).first()
     if not db_category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -40,6 +44,8 @@ def update_category(id: int, category: schemas.CategoryCreate, db: Session = Dep
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_category(id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     db_category = db.query(models.Category).filter(models.Category.id == id).first()
     if not db_category:
         raise HTTPException(status_code=404, detail="Category not found")

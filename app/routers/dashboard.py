@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from .. import models, schemas, database
 from .auth import get_current_user
@@ -10,6 +10,11 @@ router = APIRouter(
 
 @router.get("/stats", response_model=schemas.DashboardStats)
 def get_dashboard_stats(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access this resource"
+        )
     # In a real app, calculate these from DB
     # For now, return mock data as per requirements or simple counts
     
