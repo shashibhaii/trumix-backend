@@ -55,3 +55,7 @@ app.include_router(wholesale.router)
 @app.get("/")
 def read_root():
     return {"message": "Welcome to TruMix Admin API"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
