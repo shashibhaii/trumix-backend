@@ -109,6 +109,7 @@ class ProductResponse(ProductBase):
     id: int
     rating: float
     review_count: int
+    display_order: int = 0  # Explicitly include for response
     variants: List[VariantResponse] = []
     
     @field_validator('images', mode='before')
@@ -130,7 +131,8 @@ class ProductResponse(ProductBase):
         return v
 
     class Config:
-        orm_mode = True
+        from_attributes = True  # Pydantic v2
+        orm_mode = True  # Pydantic v1 compatibility
 
 class PaginationMeta(BaseModel):
     total: int
