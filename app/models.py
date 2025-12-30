@@ -88,6 +88,7 @@ class Product(Base):
     review_count = Column(Integer, default=0)
     attributes = Column(Text, nullable=True) # JSON string
     category_id = Column(Integer, ForeignKey("categories.id"))
+    display_order = Column(Integer, default=0, nullable=True)
     
     category = relationship("Category", back_populates="products")
     variants = relationship("Variant", back_populates="product")

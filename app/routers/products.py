@@ -41,6 +41,8 @@ def get_products(
         query = query.order_by(models.Product.price.desc())
     elif sort == 'newest':
         query = query.order_by(models.Product.id.desc())
+    elif sort == 'order':
+        query = query.order_by(models.Product.display_order.asc(), models.Product.id.desc())
     # elif sort == 'popular': # Need order stats for this
     #     pass
         
@@ -85,6 +87,7 @@ async def create_product(
     price: float = Form(...),
     stock: int = Form(...),
     description: str = Form(None),
+    display_order: int = Form(0),
     image: UploadFile = File(None), # Handle file upload
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
@@ -103,7 +106,8 @@ async def create_product(
         price=price,
         stock=stock,
         description=description,
-        image_url=image_url
+        image_url=image_url,
+        display_order=display_order
     )
     db.add(new_product)
     db.commit()
@@ -118,6 +122,7 @@ async def update_product(
     price: Optional[float] = Form(None),
     stock: Optional[int] = Form(None),
     description: Optional[str] = Form(None),
+    display_order: Optional[int] = Form(None),
     image: UploadFile = File(None),
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
@@ -133,6 +138,7 @@ async def update_product(
     if price: product.price = price
     if stock: product.stock = stock
     if description: product.description = description
+    if display_order is not None: product.display_order = display_order
     if image:
         # Use Azure Blob Storage
         product.image_url = await upload_image_to_blob(image)

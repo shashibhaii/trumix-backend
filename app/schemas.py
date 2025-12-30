@@ -100,6 +100,7 @@ class ProductBase(BaseModel):
     image_url: Optional[str] = None
     images: Optional[List[str]] = []
     attributes: Optional[Dict[str, Any]] = {}
+    display_order: Optional[int] = 0
 
 class ProductCreate(ProductBase):
     pass
