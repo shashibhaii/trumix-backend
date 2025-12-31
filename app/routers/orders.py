@@ -110,9 +110,38 @@ def get_orders(
     
     orders = query.order_by(models.Order.created_at.desc()).offset(skip).limit(limit).all()
     
+    # Format orders with proper item data
+    formatted_orders = []
+    for order in orders:
+        order_data = {
+            "id": order.id,
+            "customer_name": order.customer_name,
+            "customer_email": order.customer_email,
+            "customer_phone": order.customer_phone,
+            "customer_address": order.customer_address,
+            "total_amount": order.total_amount,
+            "status": order.status,
+            "created_at": order.created_at,
+            "items": []
+        }
+        
+        # Format order items with product and variant names
+        for item in order.items:
+            item_data = {
+                "product_id": item.product_id,
+                "variant_id": item.variant_id,
+                "quantity": item.quantity,
+                "price": item.price,
+                "product_name": item.product.name if item.product else "Unknown Product",
+                "variant_name": item.variant.name if item.variant else None
+            }
+            order_data["items"].append(item_data)
+        
+        formatted_orders.append(order_data)
+    
     return {
         "success": True,
-        "data": orders
+        "data": formatted_orders
     }
 
 @router.get("/{id}", response_model=schemas.OrderDetailAPIResponse)
@@ -124,10 +153,35 @@ def get_order(id: int, db: Session = Depends(database.get_db), current_user: mod
     # Check permission
     if current_user.role != models.UserRole.admin and order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this order")
+    
+    # Format order with proper item data
+    order_data = {
+        "id": order.id,
+        "customer_name": order.customer_name,
+        "customer_email": order.customer_email,
+        "customer_phone": order.customer_phone,
+        "customer_address": order.customer_address,
+        "total_amount": order.total_amount,
+        "status": order.status,
+        "created_at": order.created_at,
+        "items": []
+    }
+    
+    # Format order items with product and variant names
+    for item in order.items:
+        item_data = {
+            "product_id": item.product_id,
+            "variant_id": item.variant_id,
+            "quantity": item.quantity,
+            "price": item.price,
+            "product_name": item.product.name if item.product else "Unknown Product",
+            "variant_name": item.variant.name if item.variant else None
+        }
+        order_data["items"].append(item_data)
         
     return {
         "success": True,
-        "data": order
+        "data": order_data
     }
 
 @router.patch("/{id}/status", response_model=schemas.OrderResponse)

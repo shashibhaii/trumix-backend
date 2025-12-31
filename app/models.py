@@ -158,6 +158,7 @@ class OrderItem(Base):
     
     order = relationship("Order", back_populates="items")
     product = relationship("Product", back_populates="order_items")
+    variant = relationship("Variant")
 
 class Offer(Base):
     __tablename__ = "offers"
