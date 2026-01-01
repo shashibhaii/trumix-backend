@@ -51,7 +51,7 @@ SHIPPING_ENABLED = True  # Set to False to disable shipping
 # ------------------------------------------
 # 3. COD (Cash on Delivery) CHARGES
 # ------------------------------------------
-COD_ENABLED = True
+COD_ENABLED = False
 COD_FIXED_CHARGE = 40  # Fixed COD handling fee in ₹
 COD_MAX_ORDER_VALUE = 50000  # Maximum cart value for COD (in ₹)
 
