@@ -9,9 +9,9 @@ import os
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="TruMix Admin Panel API",
-    description="Backend API for TruMix Admin Panel",
-    version="1.0.0",
+    title="TruMix E-Commerce API",
+    description="Complete backend API for TruMix online store with admin panel. Features include authentication, product catalog, order management with server-side financial calculations, shopping cart, payments with COD support, coupon management, and comprehensive admin dashboard.",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json"

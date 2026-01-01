@@ -166,6 +166,11 @@ class OrderResponse(BaseModel):
     customer_email: str
     customer_phone: Optional[str] = None
     customer_address: Optional[str] = None
+    subtotal: float
+    discount_amount: float = 0.0
+    tax_amount: float = 0.0
+    shipping_amount: float = 0.0
+    cod_charges: float = 0.0
     total_amount: float
     status: OrderStatus
     created_at: datetime
@@ -175,10 +180,72 @@ class OrderResponse(BaseModel):
         orm_mode = True
 
 class OrderCreate(BaseModel):
-    items: List[dict] # {product_id, variant_id, quantity}
-    shippingAddress: dict # {street, city, ...}
-    paymentMethod: str
-    couponCode: Optional[str] = None
+    items: List[dict] = Field(
+        ...,
+        description="List of products to order. Each item must have productId, quantity, and optional variantId",
+        example=[
+            {"productId": 19, "variantId": None, "quantity": 2},
+            {"productId": 20, "variantId": None, "quantity": 1}
+        ]
+    )
+    shippingAddress: dict = Field(
+        ...,
+        description="Complete shipping address with street, city, state, zip, and country",
+        example={
+            "street": "123 Main Street, Apartment 4B",
+            "city": "Mumbai",
+            "state": "Maharashtra",
+            "zip": "400001",
+            "country": "India"
+        }
+    )
+    paymentMethod: str = Field(
+        ...,
+        description="Payment method: 'cod' for Cash on Delivery, 'credit_card', 'debit_card', or 'upi'",
+        example="cod"
+    )
+    customerName: Optional[str] = Field(
+        None,
+        description="Customer name for this order. If not provided, uses logged-in user's name",
+        example="Rajesh Kumar"
+    )
+    customerEmail: Optional[str] = Field(
+        None,
+        description="Customer email for order updates. If not provided, uses logged-in user's email",
+        example="rajesh@example.com"
+    )
+    customerPhone: Optional[str] = Field(
+        None,
+        description="Customer phone number for delivery coordination. If not provided, uses logged-in user's phone",
+        example="+91 98765 43210"
+    )
+    couponCode: Optional[str] = Field(
+        None,
+        description="Optional coupon code for discounts (e.g., WELCOME10, FLAT50)",
+        example="WELCOME10"
+    )
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "items": [
+                    {"productId": 19, "variantId": None, "quantity": 2},
+                    {"productId": 20, "variantId": None, "quantity": 1}
+                ],
+                "shippingAddress": {
+                    "street": "123 Main Street, Apartment 4B",
+                    "city": "Mumbai",
+                    "state": "Maharashtra",
+                    "zip": "400001",
+                    "country": "India"
+                },
+                "paymentMethod": "cod",
+                "customerName": "Rajesh Kumar",
+                "customerEmail": "rajesh@example.com",
+                "customerPhone": "+91 98765 43210",
+                "couponCode": "WELCOME10"
+            }
+        }
 
 class OrderUpdateStatus(BaseModel):
     status: OrderStatus

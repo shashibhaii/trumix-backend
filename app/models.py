@@ -140,7 +140,15 @@ class Order(Base):
     customer_email = Column(String, nullable=False)
     customer_phone = Column(String, nullable=True)
     customer_address = Column(Text, nullable=True) # JSON or formatted string
-    total_amount = Column(Float, nullable=False)
+    
+    # Financial breakdown
+    subtotal = Column(Float, nullable=False)  # Sum of item prices
+    discount_amount = Column(Float, default=0.0)  # Discount from coupons
+    tax_amount = Column(Float, default=0.0)  # Tax charged
+    shipping_amount = Column(Float, default=0.0)  # Shipping charges
+    cod_charges = Column(Float, default=0.0)  # COD handling fee
+    total_amount = Column(Float, nullable=False)  # Final total
+    
     status = Column(Enum(OrderStatus), default=OrderStatus.Pending)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

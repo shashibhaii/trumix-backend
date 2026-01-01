@@ -81,6 +81,19 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Send welcome email
+    try:
+        from ..services.email_service import send_welcome_email
+        email_data = {
+            'email': new_user.email,
+            'name': new_user.name
+        }
+        send_welcome_email(email_data)
+    except Exception as e:
+        print(f"[EMAIL ERROR] Failed to send welcome email: {str(e)}")
+        # Don't fail registration if email fails
+    
     return new_user
 
 @router.post("/send-otp")
