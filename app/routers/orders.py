@@ -373,4 +373,35 @@ def update_order_status(
     order.status = status_update.status
     db.commit()
     db.refresh(order)
-    return order
+    
+    # Manually format order data to include product and variant names
+    order_data = {
+        "id": order.id,
+        "customer_name": order.customer_name,
+        "customer_email": order.customer_email,
+        "customer_phone": order.customer_phone,
+        "customer_address": order.customer_address,
+        "subtotal": order.subtotal,
+        "discount_amount": order.discount_amount,
+        "tax_amount": order.tax_amount,
+        "shipping_amount": order.shipping_amount,
+        "cod_charges": order.cod_charges,
+        "total_amount": order.total_amount,
+        "status": order.status,
+        "created_at": order.created_at,
+        "items": []
+    }
+    
+    # Format order items with product and variant names
+    for item in order.items:
+        item_data = {
+            "product_id": item.product_id,
+            "variant_id": item.variant_id,
+            "quantity": item.quantity,
+            "price": item.price,
+            "product_name": item.product.name if item.product else "Unknown Product",
+            "variant_name": item.variant.name if item.variant else None
+        }
+        order_data["items"].append(item_data)
+    
+    return order_data
