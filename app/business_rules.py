@@ -84,11 +84,42 @@ def apply_coupon(subtotal: float, coupon_code: str = None) -> float:
     return discount
 
 
-def calculate_order_totals(subtotal: float, payment_method: str, coupon_code: str = None, state: str = None):
+from sqlalchemy.orm import Session
+from . import models
+
+def calculate_order_totals(db: Session, items: list, payment_method: str, coupon_code: str = None):
     """
     Calculate all order totals based on business rules
-    Returns a dictionary with breakdown of all charges
+    Returns a tuple: (financial_breakdown, order_items)
     """
+    # Calculate subtotal from items and validate products exist
+    subtotal = 0
+    order_items = []
+    
+    for item in items:
+        product = db.query(models.Product).filter(models.Product.id == item['productId']).first()
+        if not product:
+            raise ValueError(f"Product {item['productId']} not found")
+            
+        price = product.sale_price if product.sale_price else product.price
+        variant_id = item.get('variantId')
+        
+        if variant_id:
+            variant = db.query(models.Variant).filter(models.Variant.id == variant_id).first()
+            if not variant:
+                raise ValueError(f"Variant {variant_id} not found")
+            price = variant.price
+            
+        quantity = item['quantity']
+        subtotal += price * quantity
+        
+        order_items.append({
+            "product_id": product.id,
+            "variant_id": variant_id,
+            "quantity": quantity,
+            "price": price
+        })
+
     # Apply discount
     discount_amount = apply_coupon(subtotal, coupon_code)
     amount_after_discount = subtotal - discount_amount
@@ -97,7 +128,9 @@ def calculate_order_totals(subtotal: float, payment_method: str, coupon_code: st
     tax_amount = calculate_tax(amount_after_discount)
     
     # Calculate shipping on subtotal (before discount)
-    shipping_amount = calculate_shipping(subtotal, state)
+    # Note: State is not passed here, assuming flat shipping or based on subtotal only for now
+    # If state-based shipping is needed, we need to pass shipping_address to this function
+    shipping_amount = calculate_shipping(subtotal)
     
     # Calculate COD charges on subtotal
     cod_charges = calculate_cod_charges(subtotal, payment_method)
@@ -105,7 +138,7 @@ def calculate_order_totals(subtotal: float, payment_method: str, coupon_code: st
     # Calculate final total
     total_amount = amount_after_discount + tax_amount + shipping_amount + cod_charges
     
-    return {
+    financial_breakdown = {
         "subtotal": round(subtotal, 2),
         "discount_amount": round(discount_amount, 2),
         "tax_amount": round(tax_amount, 2),
@@ -113,3 +146,5 @@ def calculate_order_totals(subtotal: float, payment_method: str, coupon_code: st
         "cod_charges": round(cod_charges, 2),
         "total_amount": round(total_amount, 2)
     }
+    
+    return financial_breakdown, order_items

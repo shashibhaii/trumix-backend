@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from .. import models, schemas, database
-from .auth import get_current_user
+from .auth import get_current_user, get_optional_user
 import json
 
 router = APIRouter(
@@ -31,6 +31,10 @@ router = APIRouter(
        - COD charges (₹40 if COD selected)
        - Discount (applies valid coupon)
     3. Returns complete breakdown and order ID
+    
+    **Guest Checkout:**
+    - If user is not logged in, `customerName`, `customerEmail`, and `customerPhone` are REQUIRED.
+    - If logged in, these fields are optional (defaults to profile).
     
     **Important:** All financial calculations are done server-side to prevent manipulation.
     """,
@@ -65,59 +69,41 @@ router = APIRouter(
 def create_order(
     order_in: schemas.OrderCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: Optional[models.User] = Depends(get_optional_user)
 ):
     # Import business rules
     from ..business_rules import calculate_order_totals
     
-    # Calculate subtotal from items and validate products exist
-    subtotal = 0
-    order_items = []
-    
-    for item in order_in.items:
-        product = db.query(models.Product).filter(models.Product.id == item['productId']).first()
-        if not product:
-            raise HTTPException(status_code=404, detail=f"Product {item['productId']} not found")
-            
-        price = product.sale_price if product.sale_price else product.price
-        variant_id = item.get('variantId')
+    # Determine customer details
+    if current_user:
+        user_id = current_user.id
+        customer_name = order_in.customerName or current_user.name
+        customer_email = order_in.customerEmail or current_user.email
+        customer_phone = order_in.customerPhone or current_user.phone
+    else:
+        # Guest Checkout Validation
+        if not (order_in.customerName and order_in.customerEmail and order_in.customerPhone):
+             raise HTTPException(status_code=400, detail="Customer name, email, and phone are required for guest checkout")
         
-        if variant_id:
-            variant = db.query(models.Variant).filter(models.Variant.id == variant_id).first()
-            if not variant:
-                raise HTTPException(status_code=404, detail=f"Variant {variant_id} not found")
-            price = variant.price
-            
-        quantity = item['quantity']
-        subtotal += price * quantity
-        
-        order_items.append({
-            "product_id": product.id,
-            "variant_id": variant_id,
-            "quantity": quantity,
-            "price": price
-        })
-    
-    # Calculate all financial values using business rules (SERVER-SIDE)
+        user_id = None
+        customer_name = order_in.customerName
+        customer_email = order_in.customerEmail
+        customer_phone = order_in.customerPhone
+
+    # Validate products and calculate totals
     try:
-        state = order_in.shippingAddress.get('state')
-        financial_breakdown = calculate_order_totals(
-            subtotal=subtotal,
-            payment_method=order_in.paymentMethod,
+        financial_breakdown, order_items = calculate_order_totals(
+            db=db,
+            items=order_in.items,
             coupon_code=order_in.couponCode,
-            state=state
+            payment_method=order_in.paymentMethod
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
-    # Use provided customer details or fall back to user profile
-    customer_name = order_in.customerName or current_user.name
-    customer_email = order_in.customerEmail or current_user.email
-    customer_phone = order_in.customerPhone or current_user.phone
         
     # Create Order with calculated values
     new_order = models.Order(
-        user_id=current_user.id,
+        user_id=user_id,
         customer_name=customer_name,
         customer_email=customer_email,
         customer_phone=customer_phone,
@@ -130,6 +116,7 @@ def create_order(
         total_amount=financial_breakdown['total_amount'],
         status=models.OrderStatus.Pending
     )
+    
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
@@ -145,13 +132,14 @@ def create_order(
         )
         db.add(new_item)
         
-    # Clear user's cart
-    cart = db.query(models.Cart).filter(models.Cart.user_id == current_user.id).first()
-    if cart:
-        db.query(models.CartItem).filter(models.CartItem.cart_id == cart.id).delete()
+    # Clear user's cart (only if logged in)
+    if current_user:
+        cart = db.query(models.Cart).filter(models.Cart.user_id == current_user.id).first()
+        if cart:
+            db.query(models.CartItem).filter(models.CartItem.cart_id == cart.id).delete()
         
     db.commit()
-    
+
     # Send order confirmation email
     try:
         from ..services.email_service import send_order_confirmation
@@ -196,7 +184,7 @@ def create_order(
             "codCharges": financial_breakdown['cod_charges'],
             "totalAmount": financial_breakdown['total_amount'],
             "status": new_order.status,
-            "paymentIntentClientSecret": "pi_mock_secret" # Mock payment intent
+            "paymentIntentClientSecret": "pi_mock_secret"
         }
     }
 
