@@ -159,6 +159,7 @@ class OrderItemResponse(BaseModel):
     price: float
     product_name: str 
     variant_name: Optional[str] = None
+    product_image: Optional[str] = None
 
 class OrderResponse(BaseModel):
     id: int

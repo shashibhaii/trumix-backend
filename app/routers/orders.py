@@ -153,16 +153,13 @@ def create_order(
             'items': [
                 {
                     'name': item['product'].name if 'product' in item else db.query(models.Product).get(item['product_id']).name,
-                    'variant_name': db.query(models.Variant).get(item['variant_id']).name if item['variant_id'] else None,
-                    'quantity': item['quantity'],
-                    'price': item['price']
+                    'variant_name': item.variant.name if item.variant else None,
+                    'quantity': item.quantity,
+                    'price': item.price,
+                    'product_image': item.product.image_url if item.product else None
                 }
                 for item in order_items
             ],
-            'subtotal': financial_breakdown['subtotal'],
-            'discount_amount': financial_breakdown['discount_amount'],
-            'tax_amount': financial_breakdown['tax_amount'],
-            'shipping_amount': financial_breakdown['shipping_amount'],
             'cod_charges': financial_breakdown['cod_charges'],
             'total_amount': financial_breakdown['total_amount'],
             'shipping_address': order_in.shippingAddress
@@ -254,7 +251,8 @@ def get_orders(
                 "quantity": item.quantity,
                 "price": item.price,
                 "product_name": item.product.name if item.product else "Unknown Product",
-                "variant_name": item.variant.name if item.variant else None
+                "variant_name": item.variant.name if item.variant else None,
+                "product_image": item.product.image_url if item.product else None
             }
             order_data["items"].append(item_data)
         
@@ -318,7 +316,8 @@ def get_order(id: int, db: Session = Depends(database.get_db), current_user: mod
             "quantity": item.quantity,
             "price": item.price,
             "product_name": item.product.name if item.product else "Unknown Product",
-            "variant_name": item.variant.name if item.variant else None
+            "variant_name": item.variant.name if item.variant else None,
+            "product_image": item.product.image_url if item.product else None
         }
         order_data["items"].append(item_data)
         
@@ -388,7 +387,8 @@ def update_order_status(
             "quantity": item.quantity,
             "price": item.price,
             "product_name": item.product.name if item.product else "Unknown Product",
-            "variant_name": item.variant.name if item.variant else None
+            "variant_name": item.variant.name if item.variant else None,
+            "product_image": item.product.image_url if item.product else None
         }
         order_data["items"].append(item_data)
     
