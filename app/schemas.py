@@ -225,6 +225,11 @@ class OrderCreate(BaseModel):
         description="Optional coupon code for discounts (e.g., WELCOME10, FLAT50)",
         example="WELCOME10"
     )
+    freeSample: Optional[dict] = Field(
+        None,
+        description="Optional free sample item {productId, variantId} if eligibility criteria met",
+        example={"productId": 25, "variantId": None}
+    )
     
     class Config:
         schema_extra = {

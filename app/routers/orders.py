@@ -98,6 +98,37 @@ def create_order(
             coupon_code=order_in.couponCode,
             payment_method=order_in.paymentMethod
         )
+        
+        # Free Sample Logic: Buy 3 Premix (Category 1), Get 1 Free
+        print(f"DEBUG: freeSample in request: {order_in.freeSample}")
+        if order_in.freeSample:
+            # Check eligibility: Count distinct items in Category 1
+            premix_count = 0
+            for item in order_in.items:
+                product = db.query(models.Product).get(item['productId'])
+                if product and product.category_id == 1: # 1 is Instant Premixes
+                    premix_count += 1
+            
+            print(f"DEBUG: premix_count: {premix_count}")
+            
+            if premix_count >= 3:
+                # Validate free sample item
+                free_product = db.query(models.Product).get(order_in.freeSample['productId'])
+                if not free_product:
+                    raise HTTPException(status_code=400, detail="Free sample product not found")
+                
+                if free_product.category_id != 1:
+                     raise HTTPException(status_code=400, detail="Free sample must be an Instant Premix")
+
+                # Add free sample to order items
+                order_items.append({
+                    "product_id": free_product.id,
+                    "variant_id": order_in.freeSample.get('variantId'),
+                    "quantity": 1,
+                    "price": 0.0 # Free!
+                })
+            else:
+                raise HTTPException(status_code=400, detail="Not eligible for free sample. Buy 3 Instant Premixes to get 1 free.")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
         
