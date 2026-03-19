@@ -13,7 +13,6 @@ dependencies = [
     "bcrypt==3.2.2",
     "python-multipart",
     "python-dotenv",
-    "azure-storage-blob",
     "email-validator",
     "gunicorn",
     "phonepe_sdk",

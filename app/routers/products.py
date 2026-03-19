@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from .. import models, schemas, database
 from .auth import get_current_user
-from ..services.azure_blob import upload_image_to_blob
+from ..services.image_storage import save_image_to_db
 
 router = APIRouter(
     prefix="/api/v1/products",
@@ -97,8 +97,7 @@ async def create_product(
     # Handle image upload
     image_url = None
     if image:
-        # Use Azure Blob Storage
-        image_url = await upload_image_to_blob(image)
+        image_url = await save_image_to_db(image, db)
     
     new_product = models.Product(
         name=name,
@@ -140,8 +139,7 @@ async def update_product(
     if description: product.description = description
     if display_order is not None: product.display_order = display_order
     if image:
-        # Use Azure Blob Storage
-        product.image_url = await upload_image_to_blob(image)
+        product.image_url = await save_image_to_db(image, db)
     
     db.commit()
     db.refresh(product)

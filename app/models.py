@@ -220,3 +220,12 @@ class ContactSubmission(Base):
     subject = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class ProductImage(Base):
+    __tablename__ = "product_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String(255), nullable=False)
+    content_type = Column(String(100), nullable=False)
+    data = Column(Text(length=2**24), nullable=False)  # MEDIUMTEXT for base64
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
