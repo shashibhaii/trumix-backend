@@ -21,3 +21,7 @@ dependencies = [
 [[tool.uv.index]]
 name = "phonepe"
 url = "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-python"
+explicit = true
+
+[tool.uv.sources]
+phonepe-sdk = { index = "phonepe" }
