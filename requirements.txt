@@ -11,3 +11,4 @@ python-dotenv
 azure-storage-blob
 email-validator
 gunicorn
+phonepe_sdk

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from uuid import uuid4
 from .. import models, schemas, database
 from .auth import get_current_user, get_optional_user
 import json
@@ -133,6 +134,10 @@ def create_order(
         raise HTTPException(status_code=400, detail=str(e))
         
     # Create Order with calculated values
+    # Determine payment status based on method
+    is_phonepe = order_in.paymentMethod.lower() == "phonepe"
+    payment_status = models.PaymentStatus.Initiated if is_phonepe else models.PaymentStatus.Pending
+    
     new_order = models.Order(
         user_id=user_id,
         customer_name=customer_name,
@@ -145,6 +150,8 @@ def create_order(
         shipping_amount=financial_breakdown['shipping_amount'],
         cod_charges=financial_breakdown['cod_charges'],
         total_amount=financial_breakdown['total_amount'],
+        payment_method=order_in.paymentMethod.lower(),
+        payment_status=payment_status,
         status=models.OrderStatus.Pending
     )
     
@@ -171,34 +178,68 @@ def create_order(
         
     db.commit()
 
-    # Send order confirmation email
-    try:
-        from ..services.email_service import send_order_confirmation
-        from datetime import datetime
-        
-        email_data = {
-            'customer_email': customer_email,
-            'customer_name': customer_name,
-            'order_id': new_order.id,
-            'order_date': datetime.now().strftime("%B %d, %Y"),
-            'items': [
-                {
-                    'name': item['product'].name if 'product' in item else db.query(models.Product).get(item['product_id']).name,
-                    'variant_name': item.variant.name if item.variant else None,
-                    'quantity': item.quantity,
-                    'price': item.price,
-                    'product_image': item.product.image_url if item.product else None
-                }
-                for item in order_items
-            ],
-            'cod_charges': financial_breakdown['cod_charges'],
-            'total_amount': financial_breakdown['total_amount'],
-            'shipping_address': order_in.shippingAddress
-        }
-        send_order_confirmation(email_data)
-    except Exception as e:
-        print(f"[EMAIL ERROR] Failed to send order confirmation: {str(e)}")
-        # Don't fail the order if email fails
+    # PhonePe Payment Flow
+    checkout_url = None
+    if is_phonepe:
+        try:
+            from ..services import phonepe_service
+            
+            # Generate unique merchant order ID
+            merchant_order_id = f"TRUMIX-{new_order.id}-{str(uuid4())[:8]}"
+            amount_paise = int(financial_breakdown['total_amount'] * 100)
+            
+            # Initiate PhonePe payment
+            phonepe_result = phonepe_service.initiate_payment(
+                merchant_order_id=merchant_order_id,
+                amount_paise=amount_paise
+            )
+            
+            # Store PhonePe details on order
+            new_order.merchant_order_id = merchant_order_id
+            new_order.phonepe_order_id = phonepe_result.get("phonepe_order_id")
+            db.commit()
+            
+            checkout_url = phonepe_result.get("checkout_url")
+            
+        except Exception as e:
+            print(f"[PHONEPE ERROR] Failed to initiate payment: {str(e)}")
+            # Mark payment as failed but don't delete the order
+            new_order.payment_status = models.PaymentStatus.Failed
+            db.commit()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to initiate PhonePe payment: {str(e)}"
+            )
+    
+    # Send order confirmation email (only for COD - PhonePe orders get email from callback)
+    if not is_phonepe:
+        try:
+            from ..services.email_service import send_order_confirmation
+            from datetime import datetime
+            
+            email_data = {
+                'customer_email': customer_email,
+                'customer_name': customer_name,
+                'order_id': new_order.id,
+                'order_date': datetime.now().strftime("%B %d, %Y"),
+                'items': [
+                    {
+                        'name': item['product'].name if 'product' in item else db.query(models.Product).get(item['product_id']).name,
+                        'variant_name': item.variant.name if item.variant else None,
+                        'quantity': item.quantity,
+                        'price': item.price,
+                        'product_image': item.product.image_url if item.product else None
+                    }
+                    for item in order_items
+                ],
+                'cod_charges': financial_breakdown['cod_charges'],
+                'total_amount': financial_breakdown['total_amount'],
+                'shipping_address': order_in.shippingAddress
+            }
+            send_order_confirmation(email_data)
+        except Exception as e:
+            print(f"[EMAIL ERROR] Failed to send order confirmation: {str(e)}")
+            # Don't fail the order if email fails
     
     return {
         "success": True,
@@ -212,7 +253,9 @@ def create_order(
             "codCharges": financial_breakdown['cod_charges'],
             "totalAmount": financial_breakdown['total_amount'],
             "status": new_order.status,
-            "paymentIntentClientSecret": "pi_mock_secret"
+            "paymentMethod": new_order.payment_method,
+            "paymentStatus": new_order.payment_status.value if new_order.payment_status else "Pending",
+            "checkoutUrl": checkout_url
         }
     }
 
@@ -269,6 +312,9 @@ def get_orders(
             "shipping_amount": order.shipping_amount,
             "cod_charges": order.cod_charges,
             "total_amount": order.total_amount,
+            "payment_method": order.payment_method,
+            "payment_status": order.payment_status.value if order.payment_status else "Pending",
+            "phonepe_order_id": order.phonepe_order_id,
             "status": order.status,
             "created_at": order.created_at,
             "items": []
@@ -334,6 +380,9 @@ def get_order(id: int, db: Session = Depends(database.get_db), current_user: mod
         "shipping_amount": order.shipping_amount,
         "cod_charges": order.cod_charges,
         "total_amount": order.total_amount,
+        "payment_method": order.payment_method,
+        "payment_status": order.payment_status.value if order.payment_status else "Pending",
+        "phonepe_order_id": order.phonepe_order_id,
         "status": order.status,
         "created_at": order.created_at,
         "items": []
@@ -405,6 +454,9 @@ def update_order_status(
         "shipping_amount": order.shipping_amount,
         "cod_charges": order.cod_charges,
         "total_amount": order.total_amount,
+        "payment_method": order.payment_method,
+        "payment_status": order.payment_status.value if order.payment_status else "Pending",
+        "phonepe_order_id": order.phonepe_order_id,
         "status": order.status,
         "created_at": order.created_at,
         "items": []

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from .models import UserRole, OrderStatus, OfferType, OfferStatus, WholesaleInquiryStatus
+from .models import UserRole, OrderStatus, PaymentStatus, OfferType, OfferStatus, WholesaleInquiryStatus
 import json
 
 # Address Schemas
@@ -173,12 +173,35 @@ class OrderResponse(BaseModel):
     shipping_amount: float = 0.0
     cod_charges: float = 0.0
     total_amount: float
+    payment_method: Optional[str] = "cod"
+    payment_status: Optional[str] = "Pending"
+    phonepe_order_id: Optional[str] = None
     status: OrderStatus
     created_at: datetime
     items: List[OrderItemResponse] = []
 
     class Config:
         orm_mode = True
+
+class PaymentInitiateResponse(BaseModel):
+    orderId: int
+    checkoutUrl: Optional[str] = None
+    paymentMethod: str
+    totalAmount: float
+    subtotal: float
+    discountAmount: float = 0.0
+    taxAmount: float = 0.0
+    shippingAmount: float = 0.0
+    codCharges: float = 0.0
+    status: str
+
+class PaymentStatusResponse(BaseModel):
+    orderId: int
+    merchantOrderId: Optional[str] = None
+    paymentMethod: str
+    paymentStatus: str
+    orderStatus: str
+    totalAmount: float
 
 class OrderCreate(BaseModel):
     items: List[dict] = Field(

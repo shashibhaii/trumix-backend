@@ -16,6 +16,13 @@ class OrderStatus(str, enum.Enum):
     Delivered = "Delivered"
     Cancelled = "Cancelled"
 
+class PaymentStatus(str, enum.Enum):
+    Pending = "Pending"
+    Initiated = "Initiated"
+    Completed = "Completed"
+    Failed = "Failed"
+    Refunded = "Refunded"
+
 class OfferType(str, enum.Enum):
     Percentage = "Percentage"
     Fixed = "Fixed"
@@ -148,6 +155,12 @@ class Order(Base):
     shipping_amount = Column(Float, default=0.0)  # Shipping charges
     cod_charges = Column(Float, default=0.0)  # COD handling fee
     total_amount = Column(Float, nullable=False)  # Final total
+    
+    # Payment tracking
+    payment_method = Column(String, default="cod")  # "cod" or "phonepe"
+    payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.Pending)
+    phonepe_order_id = Column(String, nullable=True)  # PhonePe's internal order ID
+    merchant_order_id = Column(String, nullable=True, unique=True)  # Our unique ID sent to PhonePe
     
     status = Column(Enum(OrderStatus), default=OrderStatus.Pending)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

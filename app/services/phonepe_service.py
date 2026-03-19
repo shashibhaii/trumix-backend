@@ -1,0 +1,148 @@
+"""
+PhonePe Payment Gateway Service
+Wraps the official PhonePe Python SDK for Standard Checkout integration.
+"""
+
+import os
+import logging
+from dotenv import load_dotenv
+
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+# PhonePe Configuration
+PHONEPE_CLIENT_ID = os.getenv("PHONEPE_CLIENT_ID", "")
+PHONEPE_CLIENT_SECRET = os.getenv("PHONEPE_CLIENT_SECRET", "")
+PHONEPE_CLIENT_VERSION = int(os.getenv("PHONEPE_CLIENT_VERSION", "1"))
+PHONEPE_ENV = os.getenv("PHONEPE_ENV", "SANDBOX")
+PHONEPE_REDIRECT_URL = os.getenv("PHONEPE_REDIRECT_URL", "https://trumix.co.in/payment/status")
+PHONEPE_CALLBACK_URL = os.getenv("PHONEPE_CALLBACK_URL", "")
+
+
+def _get_env():
+    """Get PhonePe environment enum."""
+    from phonepe.sdk.pg.env import Env
+    if PHONEPE_ENV.upper() == "PRODUCTION":
+        return Env.PRODUCTION
+    return Env.SANDBOX
+
+
+def _get_client():
+    """
+    Get or create the StandardCheckoutClient singleton.
+    The SDK manages the singleton internally via get_instance().
+    """
+    from phonepe.sdk.pg.payments.v2.standard_checkout_client import StandardCheckoutClient
+
+    if not PHONEPE_CLIENT_ID or not PHONEPE_CLIENT_SECRET:
+        raise ValueError(
+            "PhonePe credentials not configured. "
+            "Set PHONEPE_CLIENT_ID and PHONEPE_CLIENT_SECRET in .env"
+        )
+
+    return StandardCheckoutClient.get_instance(
+        client_id=PHONEPE_CLIENT_ID,
+        client_secret=PHONEPE_CLIENT_SECRET,
+        client_version=PHONEPE_CLIENT_VERSION,
+        env=_get_env()
+    )
+
+
+def initiate_payment(merchant_order_id: str, amount_paise: int, redirect_url: str = None):
+    """
+    Initiate a PhonePe Standard Checkout payment.
+    
+    Args:
+        merchant_order_id: Unique order ID for this transaction
+        amount_paise: Amount in paise (₹1 = 100 paise)
+        redirect_url: URL to redirect user after payment (optional, uses default)
+    
+    Returns:
+        dict with checkout_url, phonepe_order_id, and state
+    """
+    from phonepe.sdk.pg.payments.v2.models.request.standard_checkout_pay_request import StandardCheckoutPayRequest
+
+    client = _get_client()
+    
+    if redirect_url is None:
+        redirect_url = PHONEPE_REDIRECT_URL
+
+    pay_request = StandardCheckoutPayRequest.build_request(
+        merchant_order_id=merchant_order_id,
+        amount=amount_paise,
+        redirect_url=redirect_url
+    )
+
+    logger.info(f"Initiating PhonePe payment: order={merchant_order_id}, amount={amount_paise} paise")
+    
+    pay_response = client.pay(pay_request)
+    
+    result = {
+        "checkout_url": pay_response.redirect_url,
+        "phonepe_order_id": getattr(pay_response, "order_id", None),
+        "state": getattr(pay_response, "state", "PENDING"),
+    }
+    
+    logger.info(f"PhonePe payment initiated: {result}")
+    return result
+
+
+def check_payment_status(merchant_order_id: str):
+    """
+    Check the status of a payment order.
+    
+    Args:
+        merchant_order_id: The merchant order ID used during payment initiation
+    
+    Returns:
+        dict with order_id, state, and amount
+    """
+    client = _get_client()
+    
+    logger.info(f"Checking PhonePe payment status: order={merchant_order_id}")
+    
+    status_response = client.get_order_status(merchant_order_id=merchant_order_id)
+    
+    result = {
+        "order_id": getattr(status_response, "order_id", None),
+        "state": getattr(status_response, "state", "UNKNOWN"),
+        "amount": getattr(status_response, "amount", None),
+    }
+    
+    logger.info(f"PhonePe payment status: {result}")
+    return result
+
+
+def initiate_refund(merchant_order_id: str, refund_id: str, amount_paise: int):
+    """
+    Initiate a refund for a completed payment.
+    
+    Args:
+        merchant_order_id: Original merchant order ID
+        refund_id: Unique refund ID for tracking
+        amount_paise: Refund amount in paise
+    
+    Returns:
+        dict with refund details
+    """
+    client = _get_client()
+    
+    logger.info(
+        f"Initiating PhonePe refund: order={merchant_order_id}, "
+        f"refund_id={refund_id}, amount={amount_paise} paise"
+    )
+    
+    refund_response = client.refund(
+        merchant_order_id=merchant_order_id,
+        merchant_refund_id=refund_id,
+        amount=amount_paise
+    )
+    
+    result = {
+        "refund_id": getattr(refund_response, "refund_id", refund_id),
+        "state": getattr(refund_response, "state", "UNKNOWN"),
+    }
+    
+    logger.info(f"PhonePe refund initiated: {result}")
+    return result
