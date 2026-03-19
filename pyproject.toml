@@ -1,0 +1,24 @@
+[project]
+name = "tea-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "psycopg2-binary",
+    "pydantic",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "bcrypt==3.2.2",
+    "python-multipart",
+    "python-dotenv",
+    "azure-storage-blob",
+    "email-validator",
+    "gunicorn",
+    "phonepe_sdk",
+]
+
+[[tool.uv.index]]
+name = "phonepe"
+url = "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-python"
