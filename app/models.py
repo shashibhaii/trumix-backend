@@ -42,13 +42,13 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), default=UserRole.admin)
-    phone = Column(String, nullable=True)
-    avatar_url = Column(String, nullable=True)
-    otp = Column(String, nullable=True)
+    phone = Column(String(20), nullable=True)
+    avatar_url = Column(String(500), nullable=True)
+    otp = Column(String(10), nullable=True)
     otp_expiry = Column(DateTime, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -60,11 +60,11 @@ class Address(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    street = Column(String, nullable=False)
-    city = Column(String, nullable=False)
-    state = Column(String, nullable=False)
-    zip = Column(String, nullable=False)
-    country = Column(String, nullable=False)
+    street = Column(String(500), nullable=False)
+    city = Column(String(100), nullable=False)
+    state = Column(String(100), nullable=False)
+    zip = Column(String(20), nullable=False)
+    country = Column(String(100), nullable=False)
     is_default = Column(Boolean, default=False)
 
     user = relationship("User", back_populates="addresses")
@@ -73,23 +73,23 @@ class Category(Base):
     __tablename__ = "categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True, nullable=False)
-    slug = Column(String, unique=True, index=True, nullable=True)
+    name = Column(String(255), unique=True, index=True, nullable=False)
+    slug = Column(String(255), unique=True, index=True, nullable=True)
     description = Column(Text, nullable=True)
-    image_url = Column(String, nullable=True)
+    image_url = Column(String(500), nullable=True)
     products = relationship("Product", back_populates="category")
 
 class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True, nullable=False)
-    slug = Column(String, unique=True, index=True, nullable=True)
+    name = Column(String(255), index=True, nullable=False)
+    slug = Column(String(255), unique=True, index=True, nullable=True)
     description = Column(Text, nullable=True)
     price = Column(Float, nullable=False)
     sale_price = Column(Float, nullable=True)
     stock = Column(Integer, default=0)
-    image_url = Column(String, nullable=True) # Main image
+    image_url = Column(String(500), nullable=True) # Main image
     images = Column(Text, nullable=True) # JSON string of list of images
     rating = Column(Float, default=0.0)
     review_count = Column(Integer, default=0)
@@ -107,7 +107,7 @@ class Variant(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"))
-    name = Column(String, nullable=False)
+    name = Column(String(255), nullable=False)
     price = Column(Float, nullable=False)
     stock = Column(Integer, default=0)
 
@@ -143,9 +143,9 @@ class Order(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True) # Link to user if logged in
-    customer_name = Column(String, nullable=False)
-    customer_email = Column(String, nullable=False)
-    customer_phone = Column(String, nullable=True)
+    customer_name = Column(String(255), nullable=False)
+    customer_email = Column(String(255), nullable=False)
+    customer_phone = Column(String(20), nullable=True)
     customer_address = Column(Text, nullable=True) # JSON or formatted string
     
     # Financial breakdown
@@ -157,10 +157,10 @@ class Order(Base):
     total_amount = Column(Float, nullable=False)  # Final total
     
     # Payment tracking
-    payment_method = Column(String, default="cod")  # "cod" or "phonepe"
+    payment_method = Column(String(50), default="cod")  # "cod" or "phonepe"
     payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.Pending)
-    phonepe_order_id = Column(String, nullable=True)  # PhonePe's internal order ID
-    merchant_order_id = Column(String, nullable=True, unique=True)  # Our unique ID sent to PhonePe
+    phonepe_order_id = Column(String(255), nullable=True)  # PhonePe's internal order ID
+    merchant_order_id = Column(String(255), nullable=True, unique=True)  # Our unique ID sent to PhonePe
     
     status = Column(Enum(OrderStatus), default=OrderStatus.Pending)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -185,7 +185,7 @@ class Offer(Base):
     __tablename__ = "offers"
 
     id = Column(Integer, primary_key=True, index=True)
-    code = Column(String, unique=True, index=True, nullable=False)
+    code = Column(String(50), unique=True, index=True, nullable=False)
     type = Column(Enum(OfferType), nullable=False)
     value = Column(Float, nullable=False)
     min_order_value = Column(Float, default=0)
@@ -198,16 +198,16 @@ class WholesaleInquiry(Base):
     __tablename__ = "wholesale_inquiries"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_name = Column(String, nullable=False)
-    contact_person = Column(String, nullable=False)
-    email = Column(String, nullable=False)
-    phone = Column(String, nullable=False)
-    business_type = Column(String, nullable=True)
-    gst_id = Column(String, nullable=True)
+    company_name = Column(String(255), nullable=False)
+    contact_person = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    phone = Column(String(20), nullable=False)
+    business_type = Column(String(100), nullable=True)
+    gst_id = Column(String(50), nullable=True)
     address = Column(Text, nullable=True)
-    website = Column(String, nullable=True)
+    website = Column(String(500), nullable=True)
     message = Column(Text, nullable=False)
-    estimated_volume = Column(String, nullable=True)
+    estimated_volume = Column(String(100), nullable=True)
     status = Column(Enum(WholesaleInquiryStatus), default=WholesaleInquiryStatus.Pending)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -215,8 +215,8 @@ class ContactSubmission(Base):
     __tablename__ = "contact_submissions"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    email = Column(String, nullable=False)
-    subject = Column(String, nullable=False)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    subject = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
