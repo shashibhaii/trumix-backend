@@ -89,7 +89,7 @@ class Product(Base):
     price = Column(Float, nullable=False)
     sale_price = Column(Float, nullable=True)
     stock = Column(Integer, default=0)
-    image_url = Column(String(500), nullable=True) # Main image
+    image_url = Column(Text(length=2**24), nullable=True) # Base64 data URI
     images = Column(Text, nullable=True) # JSON string of list of images
     rating = Column(Float, default=0.0)
     review_count = Column(Integer, default=0)

@@ -97,7 +97,7 @@ async def create_product(
     # Handle image upload
     image_url = None
     if image:
-        image_url = await save_image_to_db(image, db)
+        image_url = await save_image_to_db(image)
     
     new_product = models.Product(
         name=name,
@@ -139,7 +139,7 @@ async def update_product(
     if description: product.description = description
     if display_order is not None: product.display_order = display_order
     if image:
-        product.image_url = await save_image_to_db(image, db)
+        product.image_url = await save_image_to_db(image)
     
     db.commit()
     db.refresh(product)
