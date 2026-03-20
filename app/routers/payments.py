@@ -174,6 +174,55 @@ def check_payment_status(
     }
 
 
+@router.get(
+    "/status/public/{merchant_order_id}",
+    summary="Public payment status check (no auth required)",
+    description="""
+    Check payment status using the merchantOrderId (a random UUID-based string).
+    This endpoint is **public** — no authentication required.
+    
+    Used by the payment status page after PhonePe redirect, where the user
+    may be a guest (not logged in). The merchantOrderId is non-guessable
+    (e.g., TRUMIX-25-39a765de), so it's safe to expose without auth.
+    """
+)
+def check_payment_status_public(
+    merchant_order_id: str,
+    db: Session = Depends(database.get_db),
+):
+    from ..services import phonepe_service
+    
+    order = db.query(models.Order).filter(
+        models.Order.merchant_order_id == merchant_order_id
+    ).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Check live status with PhonePe
+    if order.payment_method == "phonepe" and order.merchant_order_id:
+        try:
+            status_result = phonepe_service.check_payment_status(order.merchant_order_id)
+            payment_state = status_result.get("state", "UNKNOWN")
+            
+            if payment_state == "COMPLETED" and order.payment_status != models.PaymentStatus.Completed:
+                order.payment_status = models.PaymentStatus.Completed
+                order.status = models.OrderStatus.Processing
+                db.commit()
+            elif payment_state == "FAILED" and order.payment_status != models.PaymentStatus.Failed:
+                order.payment_status = models.PaymentStatus.Failed
+                db.commit()
+        except Exception as e:
+            print(f"[PAYMENT STATUS PUBLIC] Error checking PhonePe status: {e}")
+    
+    return {
+        "orderId": order.id,
+        "paymentMethod": order.payment_method or "cod",
+        "paymentStatus": order.payment_status.value if order.payment_status else "Pending",
+        "orderStatus": order.status.value if order.status else "Pending",
+        "totalAmount": order.total_amount
+    }
+
+
 @router.post(
     "/refund/{order_id}",
     summary="Initiate refund (Admin only)",
