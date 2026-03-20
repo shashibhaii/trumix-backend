@@ -278,11 +278,11 @@ def create_order(
     
     **Filters available:**
     - status: Filter by order status (Pending, Processing, Shipped, Delivered, Cancelled)
-    - skip/limit: Pagination parameters
+    - page/limit: Pagination parameters
     """
 )
 def get_orders(
-    skip: int = 0, 
+    page: int = 1, 
     limit: int = 100, 
     status: Optional[models.OrderStatus] = None,
     db: Session = Depends(database.get_db),
@@ -297,7 +297,10 @@ def get_orders(
     if status:
         query = query.filter(models.Order.status == status)
     
-    orders = query.order_by(models.Order.created_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    offset = (page - 1) * limit
+    orders = query.order_by(models.Order.created_at.desc()).offset(offset).limit(limit).all()
+    pages = (total + limit - 1) // limit
     
     # Format orders with proper item data
     formatted_orders = []
@@ -339,7 +342,14 @@ def get_orders(
     
     return {
         "success": True,
-        "data": formatted_orders
+        "data": {
+            "orders": formatted_orders,
+            "pagination": {
+                "total": total,
+                "page": page,
+                "pages": pages
+            }
+        }
     }
 
 @router.get(

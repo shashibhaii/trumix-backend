@@ -350,9 +350,13 @@ class CartAPIResponse(BaseModel):
     success: bool
     data: CartResponse
 
+class OrderListData(BaseModel):
+    orders: List[OrderResponse]
+    pagination: PaginationMeta
+
 class OrderListAPIResponse(BaseModel):
     success: bool
-    data: List[OrderResponse]
+    data: OrderListData
 
 class OrderDetailAPIResponse(BaseModel):
     success: bool
