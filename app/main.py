@@ -42,7 +42,9 @@ origins = [
     "https://www.trumix.co.in",
     "https://trumix.co.in",
     "https://www.trumix.co.in/",
-    "https://trumix.co.in/"
+    "https://trumix.co.in/",
+    "https://trumix.vercel.app",
+    "https://trumix-frontend.vercel.app",
 ]
 
 app.add_middleware(
