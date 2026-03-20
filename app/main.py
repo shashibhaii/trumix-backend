@@ -1,3 +1,16 @@
+# Bootstrap: ensure pkg_resources is available (needed by PhonePe SDK on Python 3.12+)
+import sys
+try:
+    import pkg_resources
+except ImportError:
+    import subprocess
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", "--target", "/tmp/pip_deps", "setuptools"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    sys.path.insert(0, "/tmp/pip_deps")
+    import pkg_resources
+
 from fastapi import FastAPI
 from .database import engine, Base
 from .routers import auth, dashboard, products, orders, categories, offers, reports, users, cart, wholesale, payments, images
