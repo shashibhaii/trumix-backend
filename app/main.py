@@ -1,18 +1,14 @@
-# Bootstrap: ensure pkg_resources is available (needed by PhonePe SDK on Python 3.12+)
+# Bootstrap: ensure pkg_resources is available (needed by apscheduler via PhonePe SDK)
 import sys
 try:
     import pkg_resources
 except ImportError:
-    try:
-        import subprocess
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "--target", "/tmp/pip_deps", "setuptools"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        sys.path.insert(0, "/tmp/pip_deps")
-        import pkg_resources
-    except Exception:
-        pass  # PhonePe will fail gracefully at payment time, rest of app works
+    # Use our local shim (pkg_resources.py in project root) on platforms
+    # where setuptools is not installed (e.g., Vercel with Python 3.12+)
+    import importlib
+    sys.path.insert(0, __import__('os').path.dirname(__import__('os').path.dirname(__file__)))
+    import pkg_resources
+    sys.modules['pkg_resources'] = pkg_resources
 
 from fastapi import FastAPI
 from .database import engine, Base
