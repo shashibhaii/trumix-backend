@@ -3,13 +3,16 @@ import sys
 try:
     import pkg_resources
 except ImportError:
-    import subprocess
-    subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "--target", "/tmp/pip_deps", "setuptools"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    sys.path.insert(0, "/tmp/pip_deps")
-    import pkg_resources
+    try:
+        import subprocess
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--target", "/tmp/pip_deps", "setuptools"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        sys.path.insert(0, "/tmp/pip_deps")
+        import pkg_resources
+    except Exception:
+        pass  # PhonePe will fail gracefully at payment time, rest of app works
 
 from fastapi import FastAPI
 from .database import engine, Base
