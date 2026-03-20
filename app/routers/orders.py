@@ -188,10 +188,12 @@ def create_order(
             merchant_order_id = f"TRUMIX-{new_order.id}-{str(uuid4())[:8]}"
             amount_paise = int(financial_breakdown['total_amount'] * 100)
             
-            # Initiate PhonePe payment
+            # Initiate PhonePe payment with orderId in redirect URL
+            redirect_url = f"{phonepe_service.PHONEPE_REDIRECT_URL}?orderId={new_order.id}"
             phonepe_result = phonepe_service.initiate_payment(
                 merchant_order_id=merchant_order_id,
-                amount_paise=amount_paise
+                amount_paise=amount_paise,
+                redirect_url=redirect_url
             )
             
             # Store PhonePe details on order
