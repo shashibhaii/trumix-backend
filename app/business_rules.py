@@ -122,7 +122,13 @@ def calculate_order_totals(db: Session, items: list, payment_method: str, coupon
 
     # Apply discount
     discount_amount = apply_coupon(subtotal, coupon_code)
-    amount_after_discount = subtotal - discount_amount
+    
+    # Calculate prepaid discount (10% on orders above 299 for PhonePe)
+    prepaid_discount = 0.0
+    if payment_method.lower() == 'phonepe' and subtotal >= 299:
+        prepaid_discount = round(subtotal * 0.1, 2)
+        
+    amount_after_discount = subtotal - discount_amount - prepaid_discount
     
     # Calculate tax on discounted amount
     tax_amount = calculate_tax(amount_after_discount)
@@ -141,6 +147,7 @@ def calculate_order_totals(db: Session, items: list, payment_method: str, coupon
     financial_breakdown = {
         "subtotal": round(subtotal, 2),
         "discount_amount": round(discount_amount, 2),
+        "prepaid_discount": round(prepaid_discount, 2),
         "tax_amount": round(tax_amount, 2),
         "shipping_amount": round(shipping_amount, 2),
         "cod_charges": round(cod_charges, 2),
