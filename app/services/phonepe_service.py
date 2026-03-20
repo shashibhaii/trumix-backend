@@ -126,6 +126,8 @@ def initiate_refund(merchant_order_id: str, refund_id: str, amount_paise: int):
     Returns:
         dict with refund details
     """
+    from phonepe.sdk.pg.common.models.request.refund_request import RefundRequest
+    
     client = _get_client()
     
     logger.info(
@@ -133,11 +135,13 @@ def initiate_refund(merchant_order_id: str, refund_id: str, amount_paise: int):
         f"refund_id={refund_id}, amount={amount_paise} paise"
     )
     
-    refund_response = client.refund(
-        merchant_order_id=merchant_order_id,
+    refund_request = RefundRequest(
         merchant_refund_id=refund_id,
-        amount=amount_paise
+        amount=amount_paise,
+        original_merchant_order_id=merchant_order_id
     )
+    
+    refund_response = client.refund(refund_request)
     
     result = {
         "refund_id": getattr(refund_response, "refund_id", refund_id),
