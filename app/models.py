@@ -229,3 +229,30 @@ class ProductImage(Base):
     content_type = Column(String(100), nullable=False)
     data = Column(Text(length=2**24), nullable=False)  # MEDIUMTEXT for base64
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Campaign(Base):
+    __tablename__ = "campaigns"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subject = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    cta_url = Column(String(500), nullable=True)
+    cta_text = Column(String(100), nullable=True)
+    recipient_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    sent_by_id = Column(Integer, ForeignKey("users.id"))
+
+    sent_by = relationship("User")
+    recipients = relationship("CampaignRecipient", back_populates="campaign")
+
+class CampaignRecipient(Base):
+    __tablename__ = "campaign_recipients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"))
+    email = Column(String(255), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    status = Column(String(50), default="Sent") # Sent, Delivered, Opened, etc.
+
+    campaign = relationship("Campaign", back_populates="recipients")
+    user = relationship("User")

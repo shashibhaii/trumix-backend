@@ -436,3 +436,26 @@ class MarketingEmailRequest(BaseModel):
     cta_text: Optional[str] = None
     recipient_type: str = "all" # "all", "customers", "selected"
     selected_emails: Optional[List[str]] = None
+
+class CampaignRecipientResponse(BaseModel):
+    id: int
+    email: str
+    status: str
+    
+    class Config:
+        from_attributes = True
+
+class CampaignResponse(BaseModel):
+    id: int
+    subject: str
+    content: str
+    cta_url: Optional[str] = None
+    cta_text: Optional[str] = None
+    recipient_count: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class CampaignDetailResponse(CampaignResponse):
+    recipients: List[CampaignRecipientResponse] = []

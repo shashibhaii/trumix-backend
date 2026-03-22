@@ -51,9 +51,32 @@ async def send_marketing_email(
             detail="No matching active users found"
         )
 
-    # Queue emails
+    # Create campaign record
+    campaign = models.Campaign(
+        subject=request.subject,
+        content=request.content,
+        cta_url=request.cta_url,
+        cta_text=request.cta_text,
+        recipient_count=len(recipients),
+        sent_by_id=current_user.id
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    # Queue emails and save recipients
     count = 0
     for user in recipients:
+        # Save recipient record
+        recipient = models.CampaignRecipient(
+            campaign_id=campaign.id,
+            email=user.email,
+            user_id=user.id,
+            status="Sent"
+        )
+        db.add(recipient)
+        
+        # Dispatch email
         background_tasks.add_task(
             email_service.dispatch_marketing_email,
             to_email=user.email,
@@ -64,11 +87,41 @@ async def send_marketing_email(
             cta_text=request.cta_text
         )
         count += 1
+    
+    db.commit()
 
     return {
-        "message": f"Marketing email successfully queued for {count} recipients.",
+        "message": f"Marketing campaign '{request.subject}' successfully queued for {count} recipients.",
+        "campaign_id": campaign.id,
         "recipient_count": count
     }
+
+@router.get("/history", response_model=List[schemas.CampaignResponse])
+async def get_campaign_history(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Get history of all marketing campaigns."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    return db.query(models.Campaign).order_by(models.Campaign.created_at.desc()).all()
+
+@router.get("/history/{campaign_id}", response_model=schemas.CampaignDetailResponse)
+async def get_campaign_detail(
+    campaign_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Get detailed history of a specific marketing campaign."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+        
+    return campaign
 
 @router.get("/stats")
 async def get_marketing_stats(
