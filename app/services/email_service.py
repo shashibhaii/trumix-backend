@@ -15,6 +15,7 @@ SMTP_USER = os.getenv("SMTP_USER", "").strip()
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USER).strip()
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "TruMix Team").strip()
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://trumix.co.in").rstrip("/")
 
 # Email enabled flag
 EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "true").lower() == "true"
@@ -78,8 +79,9 @@ def send_email_sync(to_email: str, subject: str, template_name: str, context: Di
 
 # High-level dispatcher functions for specific events
 
-def dispatch_welcome_email(to_email: str, name: str, login_url: str = "https://trumix.co.in/login"):
+def dispatch_welcome_email(to_email: str, name: str, login_url: str = None):
     subject = "Welcome to TruMix! 🎉"
+    login_url = login_url or f"{FRONTEND_URL}/login"
     context = {"name": name, "login_url": login_url}
     send_email_sync(to_email, subject, "welcome.html", context)
 
@@ -99,7 +101,7 @@ def dispatch_order_placed(to_email: str, name: str, order_data: dict):
         "date": order_data['created_at'].strftime("%Y-%m-%d") if hasattr(order_data['created_at'], 'strftime') else order_data['created_at'],
         "payment_method": order_data['payment_method'].upper() if order_data['payment_method'] else "N/A",
         "items": order_data['items'],
-        "orders_url": "https://trumix.co.in/account/orders"
+        "orders_url": f"{FRONTEND_URL}/account/orders"
     }
     send_email_sync(to_email, subject, "order_placed.html", context)
 
@@ -109,6 +111,6 @@ def dispatch_order_status(to_email: str, name: str, order_id: int, new_status: s
         "name": name,
         "order_id": order_id,
         "new_status": new_status,
-        "trackingUrl": "https://trumix.co.in/account/orders" # Placeholder
+        "trackingUrl": f"{FRONTEND_URL}/account/orders" # Placeholder
     }
     send_email_sync(to_email, subject, "order_status.html", context)
