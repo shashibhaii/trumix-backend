@@ -112,7 +112,8 @@ def check_payment_status(merchant_order_id: str):
         "amount": getattr(status_response, "amount", None),
         "errorCode": getattr(status_response, "error_code", None),
         "detailedErrorCode": getattr(status_response, "detailed_error_code", None),
-        "paymentDetails": []
+        "paymentDetails": [],
+        "refundDetails": []
     }
     
     # Add payment attempts if available
@@ -127,6 +128,19 @@ def check_payment_status(merchant_order_id: str):
                 "errorCode": getattr(detail, "error_code", None),
                 "detailedErrorCode": getattr(detail, "detailed_error_code", None),
                 "instrument type": getattr(detail, "instrument_type", None)
+            })
+            
+    # Add refund details if available (Standard Checkout v2 often includes this)
+    refund_details = getattr(status_response, "refund_details", [])
+    if refund_details:
+        for refund in refund_details:
+            result["refundDetails"].append({
+                "refundId": getattr(refund, "refund_id", None),
+                "merchantRefundId": getattr(refund, "merchant_refund_id", None),
+                "amount": getattr(refund, "amount", None),
+                "state": getattr(refund, "state", None),
+                "errorCode": getattr(refund, "error_code", None),
+                "detailedErrorCode": getattr(refund, "detailed_error_code", None)
             })
     
     logger.info(f"PhonePe payment status (detailed) result: {result}")

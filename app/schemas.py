@@ -207,6 +207,14 @@ class PhonePePaymentDetail(BaseModel):
     class Config:
         populate_by_name = True
 
+class PhonePeRefundDetail(BaseModel):
+    refundId: Optional[str] = None
+    merchantRefundId: Optional[str] = None
+    amount: Optional[int] = None
+    state: Optional[str] = None
+    errorCode: Optional[str] = None
+    detailedErrorCode: Optional[str] = None
+
 class PaymentStatusResponse(BaseModel):
     orderId: int
     merchantOrderId: Optional[str] = None
@@ -220,6 +228,7 @@ class PaymentStatusResponse(BaseModel):
     errorCode: Optional[str] = None
     detailedErrorCode: Optional[str] = None
     paymentDetails: Optional[List[PhonePePaymentDetail]] = []
+    refundDetails: Optional[List[PhonePeRefundDetail]] = []
 
 class OrderCreate(BaseModel):
     items: List[dict] = Field(

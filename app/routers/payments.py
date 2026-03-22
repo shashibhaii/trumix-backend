@@ -197,7 +197,8 @@ def check_payment_status(
         "amountPaise": status_result.get("amount"),
         "errorCode": status_result.get("errorCode"),
         "detailedErrorCode": status_result.get("detailedErrorCode"),
-        "paymentDetails": status_result.get("paymentDetails", [])
+        "paymentDetails": status_result.get("paymentDetails", []),
+        "refundDetails": status_result.get("refundDetails", [])
     }
 
 
