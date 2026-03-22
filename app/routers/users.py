@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from sqlalchemy import func
 from .. import models, schemas, database
 from .auth import get_current_user
 
@@ -8,6 +9,93 @@ router = APIRouter(
     prefix="/api/v1/users",
     tags=["Users"]
 )
+
+@router.get("/customers", response_model=List[schemas.CustomerResponse])
+def get_customers(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Query users with their order aggregate data
+    customers = db.query(
+        models.User.id,
+        models.User.name,
+        models.User.email,
+        models.User.phone,
+        models.User.created_at.label("joined_at"),
+        func.count(models.Order.id).label("order_count"),
+        func.sum(models.Order.total_amount).label("total_spent")
+    ).outerjoin(models.Order, models.User.id == models.Order.user_id)\
+     .filter(models.User.role == models.UserRole.user)\
+     .group_by(models.User.id).all()
+    
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "email": c.email,
+            "phone": c.phone,
+            "joined_at": c.joined_at,
+            "order_count": c.order_count,
+            "total_spent": float(c.total_spent or 0)
+        } for c in customers
+    ]
+
+@router.get("/customers/{user_id}", response_model=schemas.CustomerDetailResponse)
+def get_customer_detail(user_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get orders
+    orders = db.query(models.Order).filter(models.Order.user_id == user_id).order_by(models.Order.created_at.desc()).all()
+    
+    formatted_orders = []
+    for order in orders:
+        order_dict = {
+            "id": order.id,
+            "customer_name": order.customer_name,
+            "customer_email": order.customer_email,
+            "customer_phone": order.customer_phone,
+            "customer_address": order.customer_address,
+            "subtotal": order.subtotal,
+            "discount_amount": order.discount_amount,
+            "tax_amount": order.tax_amount,
+            "shipping_amount": order.shipping_amount,
+            "cod_charges": order.cod_charges,
+            "total_amount": order.total_amount,
+            "payment_method": order.payment_method,
+            "payment_status": order.payment_status.value if order.payment_status else "Pending",
+            "phonepe_order_id": order.phonepe_order_id,
+            "status": order.status,
+            "created_at": order.created_at.isoformat() if order.created_at else None,
+            "items": []
+        }
+        for item in order.items:
+            order_dict["items"].append({
+                "product_id": item.product_id,
+                "variant_id": item.variant_id,
+                "quantity": item.quantity,
+                "price": item.price,
+                "product_name": item.product.name if item.product else "Unknown Product",
+                "variant_name": item.variant.name if item.variant else None,
+                "product_image": item.product.image_url if item.product else None
+            })
+        formatted_orders.append(order_dict)
+
+    return {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "phone": user.phone,
+        "joined_at": user.created_at,
+        "addresses": user.addresses,
+        "orders": formatted_orders,
+        "total_spent": sum(o.total_amount for o in orders),
+        "order_count": len(orders)
+    }
 
 @router.get("/profile", response_model=schemas.UserResponse)
 def get_user_profile(current_user: models.User = Depends(get_current_user)):

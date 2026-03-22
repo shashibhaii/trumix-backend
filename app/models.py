@@ -256,3 +256,14 @@ class CampaignRecipient(Base):
 
     campaign = relationship("Campaign", back_populates="recipients")
     user = relationship("User")
+
+class GlobalSetting(Base):
+    __tablename__ = "global_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(100), unique=True, index=True, nullable=False)
+    value = Column(Text, nullable=True)
+    group = Column(String(50), default="general") # general, communication, payment
+    description = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

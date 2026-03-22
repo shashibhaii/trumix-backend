@@ -459,3 +459,35 @@ class CampaignResponse(BaseModel):
 
 class CampaignDetailResponse(CampaignResponse):
     recipients: List[CampaignRecipientResponse] = []
+
+# Setting Schemas
+class SettingBase(BaseModel):
+    key: str
+    value: str
+    group: Optional[str] = "general"
+    description: Optional[str] = None
+
+class SettingResponse(SettingBase):
+    id: int
+    
+    class Config:
+        from_attributes = True
+
+class SettingsUpdate(BaseModel):
+    settings: Dict[str, str] # {key: value}
+
+class CustomerResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone: Optional[str] = None
+    joined_at: datetime
+    order_count: int
+    total_spent: float
+    
+    class Config:
+        from_attributes = True
+
+class CustomerDetailResponse(CustomerResponse):
+    addresses: List[AddressResponse] = []
+    orders: List[OrderResponse] = []
