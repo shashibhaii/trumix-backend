@@ -139,3 +139,40 @@ def get_addresses(
     current_user: models.User = Depends(get_current_user)
 ):
     return current_user.addresses
+
+@router.put("/addresses/{address_id}", response_model=schemas.AddressResponse)
+def update_address(
+    address_id: int,
+    address_update: schemas.AddressUpdate,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    db_address = db.query(models.Address).filter(models.Address.id == address_id, models.Address.user_id == current_user.id).first()
+    if not db_address:
+        raise HTTPException(status_code=404, detail="Address not found")
+    
+    if address_update.is_default:
+        # Set all other addresses to not default
+        db.query(models.Address).filter(models.Address.user_id == current_user.id).update({"is_default": False})
+    
+    update_data = address_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_address, key, value)
+    
+    db.commit()
+    db.refresh(db_address)
+    return db_address
+
+@router.delete("/addresses/{address_id}")
+def delete_address(
+    address_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    db_address = db.query(models.Address).filter(models.Address.id == address_id, models.Address.user_id == current_user.id).first()
+    if not db_address:
+        raise HTTPException(status_code=404, detail="Address not found")
+    
+    db.delete(db_address)
+    db.commit()
+    return {"message": "Address deleted"}

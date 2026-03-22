@@ -22,6 +22,14 @@ class AddressResponse(AddressBase):
     class Config:
         orm_mode = True
 
+class AddressUpdate(BaseModel):
+    street: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip: Optional[str] = None
+    country: Optional[str] = None
+    is_default: Optional[bool] = None
+
 # Auth Schemas
 class UserBase(BaseModel):
     email: EmailStr
