@@ -17,6 +17,17 @@ def get_offers(db: Session = Depends(database.get_db), current_user: models.User
     offers = db.query(models.Offer).all()
     return offers
 
+@router.get("/active", response_model=List[schemas.OfferResponse])
+def get_active_offers(db: Session = Depends(database.get_db)):
+    """Get all active and non-expired offers for public display."""
+    now = datetime.utcnow()
+    offers = db.query(models.Offer).filter(
+        models.Offer.status == models.OfferStatus.Active,
+        (models.Offer.valid_from == None) | (models.Offer.valid_from <= now),
+        (models.Offer.valid_until == None) | (models.Offer.valid_until >= now)
+    ).all()
+    return offers
+
 @router.post("/", response_model=schemas.OfferResponse, status_code=status.HTTP_201_CREATED)
 def create_offer(offer: schemas.OfferCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
     if current_user.role != models.UserRole.admin:
