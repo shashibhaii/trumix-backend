@@ -90,27 +90,46 @@ def initiate_payment(merchant_order_id: str, amount_paise: int, redirect_url: st
 
 def check_payment_status(merchant_order_id: str):
     """
-    Check the status of a payment order.
+    Check the status of a payment order with full details.
     
     Args:
         merchant_order_id: The merchant order ID used during payment initiation
     
     Returns:
-        dict with order_id, state, and amount
+        dict with full order details from PhonePe
     """
     client = _get_client()
     
-    logger.info(f"Checking PhonePe payment status: order={merchant_order_id}")
+    logger.info(f"Checking PhonePe payment status (detailed): order={merchant_order_id}")
     
-    status_response = client.get_order_status(merchant_order_id=merchant_order_id)
+    # details=True to get paymentDetails, errorCode, etc.
+    status_response = client.get_order_status(merchant_order_id=merchant_order_id, details=True)
     
+    # Map SDK object to dict
     result = {
         "order_id": getattr(status_response, "order_id", None),
         "state": getattr(status_response, "state", "UNKNOWN"),
         "amount": getattr(status_response, "amount", None),
+        "errorCode": getattr(status_response, "error_code", None),
+        "detailedErrorCode": getattr(status_response, "detailed_error_code", None),
+        "paymentDetails": []
     }
     
-    logger.info(f"PhonePe payment status: {result}")
+    # Add payment attempts if available
+    payment_details = getattr(status_response, "payment_details", [])
+    if payment_details:
+        for detail in payment_details:
+            result["paymentDetails"].append({
+                "transactionId": getattr(detail, "transaction_id", None),
+                "paymentMode": getattr(detail, "payment_mode", None),
+                "amount": getattr(detail, "amount", None),
+                "state": getattr(detail, "state", None),
+                "errorCode": getattr(detail, "error_code", None),
+                "detailedErrorCode": getattr(detail, "detailed_error_code", None),
+                "instrument type": getattr(detail, "instrument_type", None)
+            })
+    
+    logger.info(f"PhonePe payment status (detailed) result: {result}")
     return result
 
 

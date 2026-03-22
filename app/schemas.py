@@ -195,6 +195,18 @@ class PaymentInitiateResponse(BaseModel):
     codCharges: float = 0.0
     status: str
 
+class PhonePePaymentDetail(BaseModel):
+    transactionId: Optional[str] = None
+    paymentMode: Optional[str] = None
+    amount: Optional[int] = None
+    state: Optional[str] = None
+    errorCode: Optional[str] = None
+    detailedErrorCode: Optional[str] = None
+    instrumentType: Optional[str] = Field(None, alias="instrument type")
+    
+    class Config:
+        populate_by_name = True
+
 class PaymentStatusResponse(BaseModel):
     orderId: int
     merchantOrderId: Optional[str] = None
@@ -202,6 +214,12 @@ class PaymentStatusResponse(BaseModel):
     paymentStatus: str
     orderStatus: str
     totalAmount: float
+    # Detailed PhonePe fields
+    phonepeState: Optional[str] = None
+    amountPaise: Optional[int] = None
+    errorCode: Optional[str] = None
+    detailedErrorCode: Optional[str] = None
+    paymentDetails: Optional[List[PhonePePaymentDetail]] = []
 
 class OrderCreate(BaseModel):
     items: List[dict] = Field(

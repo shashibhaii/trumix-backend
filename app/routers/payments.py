@@ -181,6 +181,9 @@ def check_payment_status(
                 db.commit()
         except Exception as e:
             print(f"[PAYMENT STATUS] Error checking PhonePe status: {e}")
+            status_result = {}
+    else:
+        status_result = {}
     
     return {
         "orderId": order.id,
@@ -188,7 +191,13 @@ def check_payment_status(
         "paymentMethod": order.payment_method or "cod",
         "paymentStatus": order.payment_status.value if order.payment_status else "Pending",
         "orderStatus": order.status.value if order.status else "Pending",
-        "totalAmount": order.total_amount
+        "totalAmount": order.total_amount,
+        # Extended fields
+        "phonepeState": status_result.get("state"),
+        "amountPaise": status_result.get("amount"),
+        "errorCode": status_result.get("errorCode"),
+        "detailedErrorCode": status_result.get("detailedErrorCode"),
+        "paymentDetails": status_result.get("paymentDetails", [])
     }
 
 
