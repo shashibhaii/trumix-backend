@@ -9,12 +9,12 @@ import datetime
 
 load_dotenv()
 
-SMTP_HOST = os.getenv("SMTP_HOST", "mail.example.com")
+SMTP_HOST = os.getenv("SMTP_HOST", "mail.example.com").strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USER)
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "TruMix Team")
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USER).strip()
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "TruMix Team").strip()
 
 # Email enabled flag
 EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "true").lower() == "true"
@@ -56,12 +56,19 @@ def send_email_sync(to_email: str, subject: str, template_name: str, context: Di
 
     # Send email
     try:
+        # Diagnostic setup
+        print(f"[EMAIL DIAGNOSTIC] Attempting connection. Host: '{SMTP_HOST}', Port: {SMTP_PORT}")
+        print(f"[EMAIL DIAGNOSTIC] User: '{SMTP_USER}' (len={len(SMTP_USER) if SMTP_USER else 0})")
+        print(f"[EMAIL DIAGNOSTIC] Password Length: {len(SMTP_PASSWORD) if SMTP_PASSWORD else 0}")
+        
         if SMTP_PORT == 465:
             with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
+                server.set_debuglevel(1)  # High Verbosity for Vercel Logs
                 server.login(SMTP_USER, SMTP_PASSWORD)
                 server.send_message(msg)
         else:
             with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                server.set_debuglevel(1)  # High Verbosity for Vercel Logs
                 server.starttls()
                 server.login(SMTP_USER, SMTP_PASSWORD)
                 server.send_message(msg)
