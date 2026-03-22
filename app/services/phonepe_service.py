@@ -104,6 +104,7 @@ def check_payment_status(merchant_order_id: str):
     
     # details=True to get paymentDetails, errorCode, etc.
     status_response = client.get_order_status(merchant_order_id=merchant_order_id, details=True)
+    logger.info(f"RAW PhonePe status response for {merchant_order_id}: {status_response.__dict__ if hasattr(status_response, '__dict__') else status_response}")
     
     # Map SDK object to dict
     result = {
@@ -117,33 +118,45 @@ def check_payment_status(merchant_order_id: str):
     }
     
     # Add payment attempts if available
-    payment_details = getattr(status_response, "payment_details", [])
+    payment_details = getattr(status_response, "payment_details", getattr(status_response, "paymentDetails", []))
     if payment_details:
         for detail in payment_details:
             result["paymentDetails"].append({
-                "transactionId": getattr(detail, "transaction_id", None),
-                "paymentMode": getattr(detail, "payment_mode", None),
+                "transactionId": getattr(detail, "transaction_id", getattr(detail, "transactionId", None)),
+                "paymentMode": getattr(detail, "payment_mode", getattr(detail, "paymentMode", None)),
                 "amount": getattr(detail, "amount", None),
                 "state": getattr(detail, "state", None),
-                "errorCode": getattr(detail, "error_code", None),
-                "detailedErrorCode": getattr(detail, "detailed_error_code", None),
-                "instrument type": getattr(detail, "instrument_type", None)
+                "errorCode": getattr(detail, "error_code", getattr(detail, "errorCode", None)),
+                "detailedErrorCode": getattr(detail, "detailed_error_code", getattr(detail, "detailedErrorCode", None)),
+                "instrument type": getattr(detail, "instrument_type", getattr(detail, "instrumentType", None))
             })
             
-    # Add refund details if available (Standard Checkout v2 often includes this)
-    refund_details = getattr(status_response, "refund_details", [])
+    # Add refund details if available (Check both camelCase and snake_case)
+    refund_details = getattr(status_response, "refund_details", getattr(status_response, "refundDetails", []))
     if refund_details:
+        logger.info(f"Found refund details: {len(refund_details)} items")
         for refund in refund_details:
-            result["refundDetails"].append({
-                "refundId": getattr(refund, "refund_id", None),
-                "merchantRefundId": getattr(refund, "merchant_refund_id", None),
+            r_data = {
+                "refundId": getattr(refund, "refund_id", getattr(refund, "refundId", None)),
+                "merchantRefundId": getattr(refund, "merchant_refund_id", getattr(refund, "merchantRefundId", None)),
                 "amount": getattr(refund, "amount", None),
                 "state": getattr(refund, "state", None),
-                "errorCode": getattr(refund, "error_code", None),
-                "detailedErrorCode": getattr(refund, "detailed_error_code", None)
-            })
+                "errorCode": getattr(refund, "error_code", getattr(refund, "errorCode", None)),
+                "detailedErrorCode": getattr(refund, "detailed_error_code", getattr(refund, "detailedErrorCode", None))
+            }
+            result["refundDetails"].append(r_data)
+    else:
+        logger.info("No refund details found in status_response")
     
-    logger.info(f"PhonePe payment status (detailed) result: {result}")
+    # Also check payment_details for refund state
+    payment_details = getattr(status_response, "payment_details", getattr(status_response, "paymentDetails", []))
+    if payment_details:
+        for detail in payment_details:
+            d_state = getattr(detail, "state", None)
+            if d_state == "REFUNDED" or d_state == "REFUND_SUCCESS":
+                 logger.info(f"Transaction {getattr(detail, 'transaction_id', 'unknown')} has refund state: {d_state}")
+
+    logger.debug(f"PhonePe payment status (final mapped) result: {result}")
     return result
 
 
