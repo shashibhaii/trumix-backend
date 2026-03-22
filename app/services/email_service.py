@@ -115,10 +115,24 @@ def dispatch_order_status(to_email: str, name: str, order_id: int, new_status: s
     }
     send_email_sync(to_email, subject, "order_status.html", context)
 
-def dispatch_marketing_email(to_email: str, subject: str, content: str, cta_url: str = None, cta_text: str = None):
-    """Send a custom marketing email to a user."""
+def dispatch_marketing_email(to_email: str, subject: str, content: str, user_name: str = None, cta_url: str = None, cta_text: str = None):
+    """Send a custom marketing email to a user with variable support."""
+    # Create a sub-context for the content itself
+    content_context = {
+        "name": user_name or "Valued Customer",
+        "email": to_email
+    }
+    
+    # Render the content string as a Jinja2 template
+    try:
+        from jinja2 import Template
+        rendered_content = Template(content).render(**content_context)
+    except Exception as e:
+        print(f"[EMAIL ERROR] Failed to render marketing content variables: {e}")
+        rendered_content = content # Fallback to original content
+        
     context = {
-        "content": content,
+        "content": rendered_content,
         "cta_url": cta_url,
         "cta_text": cta_text
     }

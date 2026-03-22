@@ -59,6 +59,7 @@ async def send_marketing_email(
             to_email=user.email,
             subject=request.subject,
             content=request.content,
+            user_name=user.name,
             cta_url=request.cta_url,
             cta_text=request.cta_text
         )
