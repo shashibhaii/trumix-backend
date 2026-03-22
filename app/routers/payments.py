@@ -9,6 +9,28 @@ from typing import Optional
 from uuid import uuid4
 from .. import models, schemas, database
 from .auth import get_current_user
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import os
+import secrets
+import json
+
+security = HTTPBasic()
+
+def verify_phonepe_webhook(credentials: HTTPBasicCredentials = Depends(security)):
+    """Verify Basic Auth credentials for PhonePe webhook."""
+    correct_username = os.getenv("PHONEPE_WEBHOOK_USER", "phonepe_secret_user")
+    correct_password = os.getenv("PHONEPE_WEBHOOK_PASS", "phonepe_secret_pass")
+    
+    is_correct_username = secrets.compare_digest(credentials.username, correct_username)
+    is_correct_password = secrets.compare_digest(credentials.password, correct_password)
+    
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect webhook credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 router = APIRouter(
     prefix="/api/v1/payments",
@@ -32,7 +54,11 @@ router = APIRouter(
     - Payment FAILED → payment_status = Failed, order status stays Pending
     """
 )
-async def phonepe_callback(request: Request, db: Session = Depends(database.get_db)):
+async def phonepe_callback(
+    request: Request, 
+    db: Session = Depends(database.get_db),
+    _auth: str = Depends(verify_phonepe_webhook)
+):
     """Handle PhonePe server-to-server callback."""
     from ..services import phonepe_service
     
