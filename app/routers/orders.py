@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import uuid4
@@ -69,7 +69,6 @@ router = APIRouter(
 )
 def create_order(
     order_in: schemas.OrderCreate,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: Optional[models.User] = Depends(get_optional_user)
 ):
@@ -232,7 +231,7 @@ def create_order(
                     for item in order_items
                 ]
             }
-            background_tasks.add_task(dispatch_order_placed, customer_email, customer_name, order_dict)
+            dispatch_order_placed(customer_email, customer_name, order_dict)
         except Exception as e:
             print(f"[EMAIL ERROR] Failed to queue order confirmation: {str(e)}")
             # Don't fail the order if email fails
@@ -432,7 +431,6 @@ def get_order(id: int, db: Session = Depends(database.get_db), current_user: mod
 def update_order_status(
     id: int, 
     status_update: schemas.OrderUpdateStatus, 
-    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -451,7 +449,7 @@ def update_order_status(
     # Send order status update email
     try:
         from ..services.email_service import dispatch_order_status
-        background_tasks.add_task(dispatch_order_status, order.customer_email, order.customer_name, order.id, status_update.status)
+        dispatch_order_status(order.customer_email, order.customer_name, order.id, status_update.status)
     except Exception as e:
         print(f"[EMAIL ERROR] Failed to queue order status update: {str(e)}")
     

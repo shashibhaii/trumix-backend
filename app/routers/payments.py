@@ -3,7 +3,7 @@ PhonePe Payments Router
 Handles payment callbacks, status checks, and refunds.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from uuid import uuid4
@@ -32,7 +32,7 @@ router = APIRouter(
     - Payment FAILED → payment_status = Failed, order status stays Pending
     """
 )
-async def phonepe_callback(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
+async def phonepe_callback(request: Request, db: Session = Depends(database.get_db)):
     """Handle PhonePe server-to-server callback."""
     from ..services import phonepe_service
     
@@ -94,9 +94,9 @@ async def phonepe_callback(request: Request, background_tasks: BackgroundTasks, 
                         for item in order.items
                     ]
                 }
-                background_tasks.add_task(dispatch_order_placed, order.customer_email, order.customer_name, order_dict)
+                dispatch_order_placed(order.customer_email, order.customer_name, order_dict)
             except Exception as e:
-                print(f"[EMAIL ERROR] Failed to queue order confirmation after payment: {str(e)}")
+                print(f"[EMAIL ERROR] Failed to send order confirmation after payment: {str(e)}")
                 
         elif payment_state == "FAILED":
             order.payment_status = models.PaymentStatus.Failed

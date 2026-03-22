@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
@@ -78,7 +78,7 @@ async def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optiona
 # Endpoints
 
 @router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
-def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
+def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     # Check if user exists
     existing_user = db.query(models.User).filter(models.User.email == user.email).first()
     if existing_user:
@@ -98,10 +98,9 @@ def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Se
     db.commit()
     db.refresh(new_user)
     
-    # Send welcome email
     try:
         from ..services.email_service import dispatch_welcome_email
-        background_tasks.add_task(dispatch_welcome_email, new_user.email, new_user.name)
+        dispatch_welcome_email(new_user.email, new_user.name)
     except Exception as e:
         print(f"[EMAIL ERROR] Failed to queue welcome email: {str(e)}")
     
@@ -157,7 +156,7 @@ def login_otp(request: schemas.OTPLogin, db: Session = Depends(database.get_db))
     }
 
 @router.post("/login", response_model=schemas.Token)
-def login(user_credentials: schemas.UserLogin, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
+def login(user_credentials: schemas.UserLogin, request: Request, db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.email == user_credentials.email).first()
     if not user:
         raise HTTPException(status_code=403, detail="Invalid credentials")
@@ -173,9 +172,9 @@ def login(user_credentials: schemas.UserLogin, request: Request, background_task
     try:
         from ..services.email_service import dispatch_login_alert
         ip = request.client.host if request.client else "Unknown"
-        background_tasks.add_task(dispatch_login_alert, user.email, user.name, ip)
+        dispatch_login_alert(user.email, user.name, ip)
     except Exception as e:
-        print(f"[EMAIL ERROR] Failed to queue login alert: {str(e)}")
+        print(f"[EMAIL ERROR] Failed to send login alert: {str(e)}")
     
     return {
         "access_token": access_token, 
@@ -185,7 +184,7 @@ def login(user_credentials: schemas.UserLogin, request: Request, background_task
     }
 
 @router.post("/token", response_model=schemas.Token)
-def login_for_access_token(request: Request, background_tasks: BackgroundTasks, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
     if not user:
         raise HTTPException(status_code=403, detail="Invalid credentials")
@@ -201,9 +200,9 @@ def login_for_access_token(request: Request, background_tasks: BackgroundTasks, 
     try:
         from ..services.email_service import dispatch_login_alert
         ip = request.client.host if request.client else "Unknown"
-        background_tasks.add_task(dispatch_login_alert, user.email, user.name, ip)
+        dispatch_login_alert(user.email, user.name, ip)
     except Exception as e:
-        print(f"[EMAIL ERROR] Failed to queue login alert: {str(e)}")
+        print(f"[EMAIL ERROR] Failed to send login alert: {str(e)}")
     
     return {
         "access_token": access_token, 
