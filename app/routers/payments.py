@@ -3,7 +3,7 @@ PhonePe Payments Router
 Handles payment callbacks, status checks, and refunds.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional
 from uuid import uuid4
@@ -32,7 +32,7 @@ router = APIRouter(
     - Payment FAILED → payment_status = Failed, order status stays Pending
     """
 )
-async def phonepe_callback(request: Request, db: Session = Depends(database.get_db)):
+async def phonepe_callback(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
     """Handle PhonePe server-to-server callback."""
     from ..services import phonepe_service
     
@@ -79,32 +79,24 @@ async def phonepe_callback(request: Request, db: Session = Depends(database.get_
             
             # Send order confirmation email
             try:
-                from ..services.email_service import send_order_confirmation
-                from datetime import datetime
-                import json
-                
-                email_data = {
-                    'customer_email': order.customer_email,
-                    'customer_name': order.customer_name,
-                    'order_id': order.id,
-                    'order_date': datetime.now().strftime("%B %d, %Y"),
+                from ..services.email_service import dispatch_order_placed
+                order_dict = {
+                    'id': order.id,
+                    'total_amount': order.total_amount,
+                    'created_at': order.created_at,
+                    'payment_method': order.payment_method,
                     'items': [
                         {
                             'name': item.product.name if item.product else "Unknown Product",
-                            'variant_name': item.variant.name if item.variant else None,
                             'quantity': item.quantity,
-                            'price': item.price,
-                            'product_image': item.product.image_url if item.product else None
+                            'price': item.price
                         }
                         for item in order.items
-                    ],
-                    'cod_charges': order.cod_charges,
-                    'total_amount': order.total_amount,
-                    'shipping_address': json.loads(order.customer_address) if order.customer_address else {}
+                    ]
                 }
-                send_order_confirmation(email_data)
+                background_tasks.add_task(dispatch_order_placed, order.customer_email, order.customer_name, order_dict)
             except Exception as e:
-                print(f"[EMAIL ERROR] Failed to send order confirmation after payment: {str(e)}")
+                print(f"[EMAIL ERROR] Failed to queue order confirmation after payment: {str(e)}")
                 
         elif payment_state == "FAILED":
             order.payment_status = models.PaymentStatus.Failed

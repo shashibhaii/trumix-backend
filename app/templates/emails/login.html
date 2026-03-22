@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>New Sign-In Alert 🔐</h2>
+
+<p>Hi {{ name }},</p>
+
+<p>We noticed a new sign-in to your TruMix account.</p>
+
+<div class="box">
+    <strong>Time:</strong> <span class="highlight">{{ time }}</span><br>
+    <strong>Device/IP:</strong> <span class="highlight">{{ ip_address }}</span>
+</div>
+
+<p>If this was you, you don't need to do anything. If you don't recognize this activity, please reset your password immediately or contact our support team to secure your account.</p>
+
+<p>Stay safe,<br><strong>The TruMix Security Team</strong></p>
+{% endblock %}

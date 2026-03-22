@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import uuid4
@@ -69,6 +69,7 @@ router = APIRouter(
 )
 def create_order(
     order_in: schemas.OrderCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: Optional[models.User] = Depends(get_optional_user)
 ):
@@ -216,31 +217,24 @@ def create_order(
     # Send order confirmation email (only for COD - PhonePe orders get email from callback)
     if not is_phonepe:
         try:
-            from ..services.email_service import send_order_confirmation
-            from datetime import datetime
-            
-            email_data = {
-                'customer_email': customer_email,
-                'customer_name': customer_name,
-                'order_id': new_order.id,
-                'order_date': datetime.now().strftime("%B %d, %Y"),
+            from ..services.email_service import dispatch_order_placed
+            order_dict = {
+                'id': new_order.id,
+                'total_amount': financial_breakdown['total_amount'],
+                'created_at': new_order.created_at,
+                'payment_method': new_order.payment_method,
                 'items': [
                     {
-                        'name': item['product'].name if 'product' in item else db.query(models.Product).get(item['product_id']).name,
-                        'variant_name': item.variant.name if item.variant else None,
-                        'quantity': item.quantity,
-                        'price': item.price,
-                        'product_image': item.product.image_url if item.product else None
+                        'name': db.query(models.Product).get(item['product_id']).name,
+                        'quantity': item['quantity'],
+                        'price': item['price']
                     }
                     for item in order_items
-                ],
-                'cod_charges': financial_breakdown['cod_charges'],
-                'total_amount': financial_breakdown['total_amount'],
-                'shipping_address': order_in.shippingAddress
+                ]
             }
-            send_order_confirmation(email_data)
+            background_tasks.add_task(dispatch_order_placed, customer_email, customer_name, order_dict)
         except Exception as e:
-            print(f"[EMAIL ERROR] Failed to send order confirmation: {str(e)}")
+            print(f"[EMAIL ERROR] Failed to queue order confirmation: {str(e)}")
             # Don't fail the order if email fails
     
     return {
@@ -438,6 +432,7 @@ def get_order(id: int, db: Session = Depends(database.get_db), current_user: mod
 def update_order_status(
     id: int, 
     status_update: schemas.OrderUpdateStatus, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -452,6 +447,13 @@ def update_order_status(
     order.status = status_update.status
     db.commit()
     db.refresh(order)
+    
+    # Send order status update email
+    try:
+        from ..services.email_service import dispatch_order_status
+        background_tasks.add_task(dispatch_order_status, order.customer_email, order.customer_name, order.id, status_update.status)
+    except Exception as e:
+        print(f"[EMAIL ERROR] Failed to queue order status update: {str(e)}")
     
     # Manually format order data to include product and variant names
     order_data = {

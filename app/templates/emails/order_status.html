@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Order Status Update 🚚</h2>
+
+<p>Hi {{ name }},</p>
+
+<p>We are writing to let you know that the status of your order <strong>#{{ order_id }}</strong> has been updated.</p>
+
+<div class="box">
+    <strong>New Status:</strong> <span class="highlight" style="font-size: 18px;">{{ new_status }}</span>
+</div>
+
+{% if new_status == 'Shipped' and trackingUrl %}
+<p>Your order is on its way! You can track your shipment using the link below:</p>
+<div style="text-align: center;">
+    <a href="{{ trackingUrl }}" class="btn">Track Package</a>
+</div>
+{% elif new_status == 'Delivered' %}
+<p>Your order has been marked as delivered! We hope you enjoy your tea. Let us know how we did by leaving a review.</p>
+{% else %}
+<p>Thank you for choosing TruMix. We are working hard to ensure your order arrives safely and quickly.</p>
+{% endif %}
+
+<p>Warm regards,<br><strong>The TruMix Team</strong></p>
+{% endblock %}
