@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="font-size: 16px; color: #333333; line-height: 1.6;">
+    {{ content | safe }}
+</div>
+
+{% if cta_url %}
+<div style="text-align: center; margin-top: 30px;">
+    <a href="{{ cta_url }}" class="btn">
+        {{ cta_text or 'Click Here' }}
+    </a>
+</div>
+{% endif %}
+
+<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eeeeee; font-size: 12px; color: #999999;">
+    <p>You are receiving this email as a registered user of TruMix. If you wish to unsubscribe, please update your preferences in your account settings.</p>
+</div>
+{% endblock %}

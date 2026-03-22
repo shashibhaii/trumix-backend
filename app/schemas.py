@@ -428,3 +428,11 @@ class ContactSubmissionCreate(BaseModel):
     email: EmailStr
     subject: str
     message: str
+
+class MarketingEmailRequest(BaseModel):
+    subject: str
+    content: str
+    cta_url: Optional[str] = None
+    cta_text: Optional[str] = None
+    recipient_type: str = "all" # "all", "customers", "selected"
+    selected_emails: Optional[List[str]] = None

@@ -114,3 +114,12 @@ def dispatch_order_status(to_email: str, name: str, order_id: int, new_status: s
         "trackingUrl": f"{FRONTEND_URL}/account/orders" # Placeholder
     }
     send_email_sync(to_email, subject, "order_status.html", context)
+
+def dispatch_marketing_email(to_email: str, subject: str, content: str, cta_url: str = None, cta_text: str = None):
+    """Send a custom marketing email to a user."""
+    context = {
+        "content": content,
+        "cta_url": cta_url,
+        "cta_text": cta_text
+    }
+    send_email_sync(to_email, subject, "marketing.html", context)
