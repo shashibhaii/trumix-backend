@@ -20,9 +20,26 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "https://trumix.co.in").rstrip("/")
 # Email enabled flag
 EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "true").lower() == "true"
 
-# Setup Jinja2 environment
 template_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "emails")
 env = Environment(loader=FileSystemLoader(template_dir))
+
+def is_event_enabled(event_key: str) -> bool:
+    """Helper to check if a specific email event is enabled in settings."""
+    try:
+        from ..database import SessionLocal
+        from ..models import GlobalSetting
+        
+        db = SessionLocal()
+        try:
+            setting = db.query(GlobalSetting).filter(GlobalSetting.key == event_key).first()
+            if setting:
+                return setting.value.lower() == "true"
+            return True # Default to enabled if setting not found
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[EMAIL SETTINGS ERROR] Could not check setting {event_key}: {e}")
+        return True # Fail safe: enable it
 
 def send_email_sync(to_email: str, subject: str, template_name: str, context: Dict[str, Any]):
     """Synchronous function to send email. Designed to be run in a BackgroundTask."""
@@ -80,6 +97,8 @@ def send_email_sync(to_email: str, subject: str, template_name: str, context: Di
 # High-level dispatcher functions for specific events
 
 def dispatch_welcome_email(to_email: str, name: str, login_url: str = None):
+    if not is_event_enabled("email_welcome"):
+        return
     subject = "Welcome to TruMix! 🎉"
     login_url = login_url or f"{FRONTEND_URL}/login"
     context = {"name": name, "login_url": login_url}
@@ -92,6 +111,8 @@ def dispatch_login_alert(to_email: str, name: str, ip_address: str):
     send_email_sync(to_email, subject, "login.html", context)
 
 def dispatch_order_placed(to_email: str, name: str, order_data: dict):
+    if not is_event_enabled("email_order_placed"):
+        return
     subject = f"Order Confirmation #{order_data['id']} - TruMix 🛍️"
             
     context = {
@@ -106,6 +127,8 @@ def dispatch_order_placed(to_email: str, name: str, order_data: dict):
     send_email_sync(to_email, subject, "order_placed.html", context)
 
 def dispatch_order_status(to_email: str, name: str, order_id: int, new_status: str):
+    if not is_event_enabled("email_order_status"):
+        return
     subject = f"Order Update #{order_id} - TruMix 🚚"
     context = {
         "name": name,
