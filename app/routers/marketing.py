@@ -34,11 +34,10 @@ async def send_marketing_email(
     recipients = []
     
     if request.recipient_type == "all":
-        recipients = db.query(models.User).filter(models.User.is_active == True).all()
+        recipients = db.query(models.User).all()
     elif request.recipient_type == "selected" and request.selected_emails:
         recipients = db.query(models.User).filter(
-            models.User.email.in_(request.selected_emails),
-            models.User.is_active == True
+            models.User.email.in_(request.selected_emails)
         ).all()
     else:
         raise HTTPException(
@@ -79,7 +78,7 @@ async def get_marketing_stats(
     if current_user.role != models.UserRole.admin:
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    total_users = db.query(models.User).filter(models.User.is_active == True).count()
+    total_users = db.query(models.User).count()
     # In a more advanced version, we'd track email campaign history
     return {
         "total_active_users": total_users,
