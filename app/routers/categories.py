@@ -20,18 +20,23 @@ _categories_cache = {
 CACHE_TTL = 300  # 5 minutes
 
 @router.get("/", response_model=List[schemas.CategoryResponse])
-def get_categories(db: Session = Depends(database.get_db)):
+def get_categories():
     current_time = time.time()
     if _categories_cache["data"] is not None and current_time < _categories_cache["expiry"]:
         return _categories_cache["data"]
     
-    categories = db.query(models.Category).all()
-    
-    # Update cache
-    _categories_cache["data"] = categories
-    _categories_cache["expiry"] = current_time + CACHE_TTL
-    
-    return categories
+    # Cache miss: get DB manually to avoid overhead for cached requests
+    db = next(database.get_db())
+    try:
+        categories = db.query(models.Category).all()
+        
+        # Update cache
+        _categories_cache["data"] = categories
+        _categories_cache["expiry"] = current_time + CACHE_TTL
+        
+        return categories
+    finally:
+        db.close()
 
 @router.post("/", response_model=schemas.CategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):

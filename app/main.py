@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from .database import engine, Base
 from .routers import auth, dashboard, products, orders, categories, offers, reports, users, cart, wholesale, payments, images, marketing, settings
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
@@ -53,6 +54,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Include Routers
 app.include_router(auth.router)
