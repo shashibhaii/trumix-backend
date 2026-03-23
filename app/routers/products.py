@@ -4,11 +4,17 @@ from typing import List, Optional
 from .. import models, schemas, database
 from .auth import get_current_user
 from ..services.image_storage import save_image_to_db
+from ..services.files import save_image_locally
+import time
 
 router = APIRouter(
     prefix="/api/v1/products",
     tags=["Products"]
 )
+
+# In-memory cache for products
+_products_cache = {}
+CACHE_TTL = 300  # 5 minutes
 
 @router.get("/", response_model=schemas.ProductListAPIResponse)
 def get_products(
@@ -20,6 +26,14 @@ def get_products(
     sort: Optional[str] = None,
     db: Session = Depends(database.get_db)
 ):
+    # Check cache first
+    cache_key = f"list_{page}_{limit}_{search}_{category}_{category_id}_{sort}"
+    current_time = time.time()
+    if cache_key in _products_cache:
+        data, expiry = _products_cache[cache_key]
+        if current_time < expiry:
+            return data
+
     query = db.query(models.Product).options(joinedload(models.Product.variants))
     
     if search:
@@ -52,7 +66,7 @@ def get_products(
     
     pages = (total + limit - 1) // limit
     
-    return {
+    response_data = {
         "success": True,
         "data": {
             "products": products,
@@ -63,6 +77,11 @@ def get_products(
             }
         }
     }
+    
+    # Update cache
+    _products_cache[cache_key] = (response_data, current_time + CACHE_TTL)
+    
+    return response_data
 
 @router.get("/{id_or_slug}", response_model=schemas.ProductDetailAPIResponse)
 def get_product_details(id_or_slug: str, db: Session = Depends(database.get_db)):
@@ -97,7 +116,7 @@ async def create_product(
     # Handle image upload
     image_url = None
     if image:
-        image_url = await save_image_to_db(image)
+        image_url = await save_image_locally(image)
     
     new_product = models.Product(
         name=name,
@@ -111,6 +130,10 @@ async def create_product(
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
+    
+    # Invalidate products cache
+    _products_cache.clear()
+    
     return new_product
 
 @router.put("/{id}", response_model=schemas.ProductResponse)
@@ -139,10 +162,14 @@ async def update_product(
     if description: product.description = description
     if display_order is not None: product.display_order = display_order
     if image:
-        product.image_url = await save_image_to_db(image)
+        product.image_url = await save_image_locally(image)
     
     db.commit()
     db.refresh(product)
+    
+    # Invalidate products cache
+    _products_cache.clear()
+    
     return product
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -155,4 +182,8 @@ def delete_product(id: int, db: Session = Depends(database.get_db), current_user
     
     db.delete(product)
     db.commit()
+    
+    # Invalidate products cache
+    _products_cache.clear()
+    
     return None

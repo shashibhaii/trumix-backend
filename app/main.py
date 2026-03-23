@@ -33,6 +33,8 @@ app = FastAPI(
 # Mount static files
 if not os.path.exists("static"):
     os.makedirs("static")
+if not os.path.exists("static/uploads"):
+    os.makedirs("static/uploads")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # CORS
