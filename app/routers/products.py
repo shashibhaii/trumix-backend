@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from .. import models, schemas, database
 from .auth import get_current_user
@@ -20,7 +20,7 @@ def get_products(
     sort: Optional[str] = None,
     db: Session = Depends(database.get_db)
 ):
-    query = db.query(models.Product)
+    query = db.query(models.Product).options(joinedload(models.Product.variants))
     
     if search:
         query = query.filter(models.Product.name.contains(search))
@@ -66,7 +66,7 @@ def get_products(
 
 @router.get("/{id_or_slug}", response_model=schemas.ProductDetailAPIResponse)
 def get_product_details(id_or_slug: str, db: Session = Depends(database.get_db)):
-    query = db.query(models.Product)
+    query = db.query(models.Product).options(joinedload(models.Product.variants))
     if id_or_slug.isdigit():
         product = query.filter(models.Product.id == int(id_or_slug)).first()
     else:
