@@ -126,7 +126,7 @@ def dispatch_order_placed(to_email: str, name: str, order_data: dict):
     }
     send_email_sync(to_email, subject, "order_placed.html", context)
 
-def dispatch_order_status(to_email: str, name: str, order_id: int, new_status: str):
+def dispatch_order_status(to_email: str, name: str, order_id: int, new_status: str, tracking_id: str = None, tracking_url: str = None, shipping_provider: str = None):
     if not is_event_enabled("email_order_status"):
         return
     subject = f"Order Update #{order_id} - TruMix 🚚"
@@ -134,7 +134,10 @@ def dispatch_order_status(to_email: str, name: str, order_id: int, new_status: s
         "name": name,
         "order_id": order_id,
         "new_status": new_status,
-        "trackingUrl": f"{FRONTEND_URL}/account/orders" # Placeholder
+        "tracking_id": tracking_id,
+        "tracking_url": tracking_url,
+        "shipping_provider": shipping_provider,
+        "orders_url": f"{FRONTEND_URL}/account/orders"
     }
     send_email_sync(to_email, subject, "order_status.html", context)
 

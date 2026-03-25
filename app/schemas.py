@@ -185,6 +185,9 @@ class OrderResponse(BaseModel):
     payment_status: Optional[str] = "Pending"
     phonepe_order_id: Optional[str] = None
     status: OrderStatus
+    tracking_id: Optional[str] = None
+    tracking_url: Optional[str] = None
+    shipping_provider: Optional[str] = None
     created_at: datetime
     items: List[OrderItemResponse] = []
 
@@ -313,6 +316,9 @@ class OrderCreate(BaseModel):
 
 class OrderUpdateStatus(BaseModel):
     status: OrderStatus
+    tracking_id: Optional[str] = None
+    tracking_url: Optional[str] = None
+    shipping_provider: Optional[str] = None
 
 # Category Schemas
 class CategoryBase(BaseModel):

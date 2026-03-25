@@ -163,6 +163,9 @@ class Order(Base):
     merchant_order_id = Column(String(255), nullable=True, unique=True)  # Our unique ID sent to PhonePe
     
     status = Column(Enum(OrderStatus), default=OrderStatus.Pending)
+    tracking_id = Column(String(100), nullable=True)
+    tracking_url = Column(String(500), nullable=True)
+    shipping_provider = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     items = relationship("OrderItem", back_populates="order")

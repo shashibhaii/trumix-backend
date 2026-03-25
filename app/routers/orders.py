@@ -314,6 +314,9 @@ def get_orders(
             "payment_status": order.payment_status.value if order.payment_status else "Pending",
             "phonepe_order_id": order.phonepe_order_id,
             "status": order.status,
+            "tracking_id": order.tracking_id,
+            "tracking_url": order.tracking_url,
+            "shipping_provider": order.shipping_provider,
             "created_at": order.created_at,
             "items": []
         }
@@ -389,6 +392,9 @@ def get_order(id: int, db: Session = Depends(database.get_db), current_user: mod
         "payment_status": order.payment_status.value if order.payment_status else "Pending",
         "phonepe_order_id": order.phonepe_order_id,
         "status": order.status,
+        "tracking_id": order.tracking_id,
+        "tracking_url": order.tracking_url,
+        "shipping_provider": order.shipping_provider,
         "created_at": order.created_at,
         "items": []
     }
@@ -443,13 +449,28 @@ def update_order_status(
         raise HTTPException(status_code=404, detail="Order not found")
     
     order.status = status_update.status
+    if status_update.tracking_id:
+        order.tracking_id = status_update.tracking_id
+    if status_update.tracking_url:
+        order.tracking_url = status_update.tracking_url
+    if status_update.shipping_provider:
+        order.shipping_provider = status_update.shipping_provider
+        
     db.commit()
     db.refresh(order)
     
     # Send order status update email
     try:
         from ..services.email_service import dispatch_order_status
-        dispatch_order_status(order.customer_email, order.customer_name, order.id, status_update.status)
+        dispatch_order_status(
+            order.customer_email, 
+            order.customer_name, 
+            order.id, 
+            status_update.status,
+            tracking_id=order.tracking_id,
+            tracking_url=order.tracking_url,
+            shipping_provider=order.shipping_provider
+        )
     except Exception as e:
         print(f"[EMAIL ERROR] Failed to queue order status update: {str(e)}")
     
@@ -470,6 +491,9 @@ def update_order_status(
         "payment_status": order.payment_status.value if order.payment_status else "Pending",
         "phonepe_order_id": order.phonepe_order_id,
         "status": order.status,
+        "tracking_id": order.tracking_id,
+        "tracking_url": order.tracking_url,
+        "shipping_provider": order.shipping_provider,
         "created_at": order.created_at,
         "items": []
     }

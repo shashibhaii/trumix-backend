@@ -45,7 +45,7 @@ def get_wholesale_inquiries(
     inquiries = db.query(models.WholesaleInquiry).order_by(models.WholesaleInquiry.created_at.desc()).all()
     return inquiries
 
-@router.put("/api/v1/wholesale/inquiries/{id}/status", response_model=schemas.WholesaleInquiryResponse)
+@router.patch("/api/v1/wholesale/inquiries/{id}/status", response_model=schemas.WholesaleInquiryResponse)
 def update_wholesale_inquiry_status(
     id: int,
     status_update: schemas.WholesaleInquiryUpdate,
