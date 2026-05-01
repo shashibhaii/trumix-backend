@@ -163,3 +163,10 @@ def dispatch_marketing_email(to_email: str, subject: str, content: str, user_nam
         "cta_text": cta_text
     }
     send_email_sync(to_email, subject, "marketing.html", context)
+
+
+def dispatch_forgot_password_otp(to_email: str, name: str, otp: str):
+    subject = 'Password Reset OTP - TruMix 🔐'
+    context = {'name': name, 'otp': otp}
+    send_email_sync(to_email, subject, 'forgot_password.html', context)
+
