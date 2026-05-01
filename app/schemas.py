@@ -49,6 +49,14 @@ class OTPLogin(BaseModel):
     phone: str
     otp: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+
 class UserResponse(UserBase):
     id: int
     name: str

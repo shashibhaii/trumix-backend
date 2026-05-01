@@ -210,3 +210,44 @@ def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestFor
         "role": user.role.value,
         "user": user
     }
+
+
+@router.post('/forgot-password')
+def forgot_password(request: schemas.ForgotPasswordRequest, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.email == request.email).first()
+    if not user:
+        return {'message': 'If an account exists, an OTP has been sent.'}
+        
+    otp = str(random.randint(100000, 999999))
+    user.otp = otp
+    user.otp_expiry = datetime.utcnow() + timedelta(minutes=10)
+    db.commit()
+    
+    try:
+        from ..services.email_service import dispatch_forgot_password_otp
+        dispatch_forgot_password_otp(user.email, user.name, otp)
+    except Exception as e:
+        print(f'[EMAIL ERROR] Failed to send OTP email: {str(e)}')
+        print(f'--- OTP for {user.email}: {otp} ---')
+    
+    return {'message': 'If an account exists, an OTP has been sent.'}
+
+@router.post('/reset-password')
+def reset_password(request: schemas.ResetPasswordRequest, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.email == request.email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail='Invalid request')
+        
+    if not user.otp or user.otp != request.otp:
+        raise HTTPException(status_code=400, detail='Invalid OTP')
+        
+    if user.otp_expiry < datetime.utcnow():
+        raise HTTPException(status_code=400, detail='OTP expired')
+        
+    user.hashed_password = get_password_hash(request.new_password)
+    user.otp = None
+    user.otp_expiry = None
+    db.commit()
+    
+    return {'message': 'Password successfully reset'}
+
