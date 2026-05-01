@@ -334,6 +334,7 @@ class CategoryResponse(CategoryBase):
     id: int
     
     class Config:
+        from_attributes = True
         orm_mode = True
 
 # Offer Schemas
@@ -432,6 +433,7 @@ class WholesaleInquiryResponse(BaseModel):
     created_at: datetime
 
     class Config:
+        from_attributes = True
         orm_mode = True
 
 class WholesaleInquiryUpdate(BaseModel):

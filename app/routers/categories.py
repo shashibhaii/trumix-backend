@@ -81,6 +81,13 @@ def delete_category(id: int, db: Session = Depends(database.get_db), current_use
     db_category = db.query(models.Category).filter(models.Category.id == id).first()
     if not db_category:
         raise HTTPException(status_code=404, detail="Category not found")
+
+    product_count = db.query(models.Product).filter(models.Product.category_id == id).count()
+    if product_count:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete category while {product_count} product(s) are assigned to it"
+        )
     
     db.delete(db_category)
     db.commit()
