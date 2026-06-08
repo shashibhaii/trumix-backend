@@ -48,13 +48,12 @@ origins = [
     "http://127.0.0.1:3002",
     "https://www.trumix.co.in",
     "https://trumix.co.in",
-    "https://trumix.vercel.app",
-    "https://trumix-frontend.vercel.app",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
