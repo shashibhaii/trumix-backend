@@ -1,23 +1,29 @@
 import os
-import cloudinary
-import cloudinary.uploader
 from fastapi import UploadFile, HTTPException
 
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-)
+
+def _get_cloudinary():
+    import cloudinary
+    import cloudinary.uploader
+    cloudinary.config(
+        cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+        api_key=os.getenv("CLOUDINARY_API_KEY"),
+        api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    )
+    return cloudinary
+
 
 async def save_image(file: UploadFile) -> str:
     """Upload image to Cloudinary and return the CDN URL."""
     try:
+        cld = _get_cloudinary()
+
         await file.seek(0)
         content = await file.read()
         if not content:
             raise HTTPException(status_code=400, detail="Empty image file")
 
-        result = cloudinary.uploader.upload(
+        result = cld.uploader.upload(
             content,
             folder="trumix/products",
             resource_type="image",
