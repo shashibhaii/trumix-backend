@@ -13,4 +13,4 @@ gunicorn
 phonepe_sdk
 setuptools
 jinja2
-cloudinary
+httpx
