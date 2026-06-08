@@ -18,6 +18,7 @@ dependencies = [
     "phonepe_sdk",
     "setuptools",
     "jinja2>=3.1.6",
+    "cloudinary",
 ]
 
 [[tool.uv.index]]

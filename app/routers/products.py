@@ -4,7 +4,7 @@ from typing import List, Optional
 from .. import models, schemas, database
 from .auth import get_current_user
 from ..services.image_storage import save_image_to_db
-from ..services.files import save_image_locally
+from ..services.files import save_image
 import time
 
 router = APIRouter(
@@ -116,7 +116,7 @@ async def create_product(
     # Handle image upload
     image_url = None
     if image:
-        image_url = await save_image_locally(image)
+        image_url = await save_image(image)
     
     new_product = models.Product(
         name=name,
@@ -162,7 +162,7 @@ async def update_product(
     if description: product.description = description
     if display_order is not None: product.display_order = display_order
     if image:
-        product.image_url = await save_image_locally(image)
+        product.image_url = await save_image(image)
     
     db.commit()
     db.refresh(product)
