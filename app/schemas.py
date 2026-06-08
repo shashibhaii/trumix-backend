@@ -169,11 +169,11 @@ class ProductDetailAPIResponse(BaseModel):
 
 # Order Schemas
 class OrderItemResponse(BaseModel):
-    product_id: int
+    product_id: Optional[int] = None
     variant_id: Optional[int] = None
     quantity: int
     price: float
-    product_name: str 
+    product_name: str
     variant_name: Optional[str] = None
     product_image: Optional[str] = None
 
